@@ -11,7 +11,7 @@ ipcMain.on('open-mail-detail', (event, params) => {
   const detailWindow = new BrowserWindow({
     width: 700,
     height: 600,
-    x: bounds.x + bounds.width,
+    x: bounds.x + 10,
     y: bounds.y,
     frame: false,
     resizable: true,
