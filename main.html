@@ -195,14 +195,18 @@
                 document.querySelectorAll('.email-item').forEach(item => {
                   item.onclick = function() {
                     const mail = emails[parseInt(this.dataset.idx)];
-                    // 새로운 창으로 상세 메일 보기
+                    // 새로운 창을 main.html 오른쪽에 띄우기 (IPC로 요청)
                     const params = new URLSearchParams({
                       subject: mail.subject,
                       received_at: mail.received_at,
                       from_addr: mail.from_addr,
                       body: mail.body || ''
                     });
-                    window.open('mail-detail.html?' + params.toString(), '_blank', 'width=700,height=600');
+                    if (window.electronAPI && window.electronAPI.openMailDetail) {
+                      window.electronAPI.openMailDetail(params.toString());
+                    } else {
+                      window.open('mail-detail.html?' + params.toString(), '_blank', 'width=700,height=600');
+                    }
                   };
                 });
               } else {

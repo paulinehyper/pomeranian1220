@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+
 contextBridge.exposeInMainWorld('electronAPI', {
   minimize: () => ipcRenderer.send('minimize'),
   close: () => ipcRenderer.send('close'),
@@ -26,5 +27,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setAutoLaunch: (enable) => ipcRenderer.invoke('set-auto-launch', enable),
   deleteAllTodos: () => ipcRenderer.invoke('delete-all-todos'),
   startMailSync: () => ipcRenderer.invoke('start-mail-sync'),
-  stopMailSync: () => ipcRenderer.invoke('stop-mail-sync')
+  stopMailSync: () => ipcRenderer.invoke('stop-mail-sync'),
+  openMailDetail: (params) => ipcRenderer.send('open-mail-detail', params)
 });

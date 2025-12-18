@@ -1,7 +1,30 @@
 
+
 const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
 const path = require('path');
 const autoLauncher = require('./auto-launch');
+
+// 메일 상세보기 창을 mainWindow 오른쪽에 띄우는 IPC 핸들러
+ipcMain.on('open-mail-detail', (event, params) => {
+  if (!mainWindow) return;
+  const bounds = mainWindow.getBounds();
+  const detailWindow = new BrowserWindow({
+    width: 700,
+    height: 600,
+    x: bounds.x + bounds.width,
+    y: bounds.y,
+    frame: false,
+    resizable: true,
+    alwaysOnTop: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+  detailWindow.loadURL(`file://${__dirname}/mail-detail.html?${params}`);
+  detailWindow.on('closed', () => {});
+});
 
 
 // get-todos, get-emails 핸들러는 앱 시작 시 한 번만 등록
@@ -510,9 +533,8 @@ app.whenReady().then(() => {
   setupMailIpc();
 
   // 1분마다 환경설정의 메일 계정으로 메일 동기화
-  const { ipcMain } = require('electron');
   // const db = require('./db');
-  const { BrowserWindow } = require('electron');
+  // const { BrowserWindow } = require('electron');
   let syncMailInterval = null;
   const syncMail = async () => {
     const row = db.prepare('SELECT * FROM mail_settings ORDER BY id DESC LIMIT 1').get();

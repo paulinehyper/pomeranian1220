@@ -9,15 +9,40 @@
     .mail-detail-wrap {
       max-width: 600px;
       margin: 40px auto;
-      padding: 32px 36px;
+      padding: 0 0 32px 0;
       border-radius: 14px;
       box-shadow: 0 4px 24px #00b49a22;
       background: #fff;
       display: flex;
       flex-direction: column;
       gap: 18px;
+      overflow: hidden;
     }
-    .mail-detail-title { font-size: 1.25em; font-weight: bold; color: #0093b4; margin-bottom: 4px; }
+    .mail-detail-header {
+      height: 48px;
+      background: #e6fff7;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      font-size: 1.15em;
+      font-weight: bold;
+      color: #0093b4;
+      border-top-left-radius: 14px;
+      border-top-right-radius: 14px;
+      -webkit-app-region: drag;
+      user-select: none;
+      cursor: move;
+    }
+    .mail-detail-header * {
+      -webkit-app-region: no-drag;
+    }
+    .mail-detail-content {
+      padding: 24px 36px 0 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .mail-detail-title { font-size: 1.15em; font-weight: bold; color: #0093b4; margin-bottom: 4px; }
     .mail-detail-meta { color: #888; font-size: 0.98em; margin-bottom: 8px; }
     .mail-detail-body { color: #444; line-height: 1.7; white-space: pre-wrap; font-size: 1.05em; }
     .close-btn { margin-top: 18px; background: #00b49a; color: #fff; border: none; padding: 8px 24px; border-radius: 8px; font-size: 1em; cursor: pointer; align-self: center; }
@@ -25,10 +50,15 @@
 </head>
 <body>
   <div class="mail-detail-wrap">
-    <div class="mail-detail-title" id="mailDetailSubject"></div>
-    <div class="mail-detail-meta" id="mailDetailMeta"></div>
-    <div class="mail-detail-body" id="mailDetailBody"></div>
-    <button class="close-btn" onclick="window.close()">닫기</button>
+    <div class="mail-detail-header">
+      <span id="mailDetailHeaderTitle">메일 상세보기</span>
+    </div>
+    <div class="mail-detail-content">
+      <div class="mail-detail-title" id="mailDetailSubject"></div>
+      <div class="mail-detail-meta" id="mailDetailMeta"></div>
+      <div class="mail-detail-body" id="mailDetailBody"></div>
+      <button class="close-btn" onclick="window.close()">닫기</button>
+    </div>
   </div>
   <script>
     // 메일 데이터 받기
