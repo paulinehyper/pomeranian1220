@@ -107,10 +107,11 @@ function setupMailIpc(main) {
             let body = '';
             if (textPart && textPart.body) {
               const { simpleParser } = require('mailparser');
+              const { htmlToText } = require('html-to-text');
               try {
                 const parsed = await simpleParser(textPart.body);
                 if (parsed.html) {
-                  body = parsed.html;
+                  body = htmlToText(parsed.html, { wordwrap: false });
                 } else if (parsed.text) {
                   body = parsed.text;
                 } else {

@@ -179,12 +179,32 @@
           window.electronAPI.getEmails().then(emails => {
             const emailList = document.getElementById('emailList');
             const loading = document.getElementById('emailListLoading');
-            if (loading) loading.style.display = 'none';
             const emailCount = document.getElementById('emailCount');
+            if (loading) loading.style.display = 'none';
             if (emailCount) emailCount.textContent = `(${emails.length})`;
             if (emailList) {
               if (emails && emails.length > 0) {
-                emailList.innerHTML = emails.map(mail => `<li style='margin-bottom:14px;padding:12px 16px;background:#fff;border-radius:8px;box-shadow:0 2px 8px #00b49a11;'><div style='font-weight:bold;color:#0093b4;'>${mail.subject}</div><div style='color:#444;font-size:0.98em;margin-top:4px;'>${mail.body ? mail.body.substring(0, 80) + (mail.body.length > 80 ? '...' : '') : ''}</div><div style='color:#888;font-size:0.92em;margin-top:4px;'>${mail.received_at} / ${mail.from_addr}</div></li>`).join('');
+                emailList.innerHTML = emails.map((mail, idx) => `
+                  <li class='email-item' data-idx='${idx}' style='margin-bottom:14px;padding:12px 16px;background:#fff;border-radius:8px;box-shadow:0 2px 8px #00b49a11;cursor:pointer;'>
+                    <div style='font-weight:bold;color:#0093b4;'>${mail.subject}</div>
+                    <div style='color:#444;font-size:0.98em;margin-top:4px;'>${mail.body ? mail.body.substring(0, 80) + (mail.body.length > 80 ? '...' : '') : ''}</div>
+                    <div style='color:#888;font-size:0.92em;margin-top:4px;'>${mail.received_at} / ${mail.from_addr}</div>
+                  </li>
+                `).join('');
+                // 상세 팝업 이벤트 연결
+                document.querySelectorAll('.email-item').forEach(item => {
+                  item.onclick = function() {
+                    const mail = emails[parseInt(this.dataset.idx)];
+                    // 새로운 창으로 상세 메일 보기
+                    const params = new URLSearchParams({
+                      subject: mail.subject,
+                      received_at: mail.received_at,
+                      from_addr: mail.from_addr,
+                      body: mail.body || ''
+                    });
+                    window.open('mail-detail.html?' + params.toString(), '_blank', 'width=700,height=600');
+                  };
+                });
               } else {
                 emailList.innerHTML = `<li style='color:#888;padding:12px;'>불러온 메일이 없습니다.</li>`;
               }
@@ -219,6 +239,36 @@
           }
         };
       }
+    }
+
+    // 상세 메일 팝업 함수
+    function showEmailDetailPopup(mail) {
+      // 기존 팝업 제거
+      const oldPopup = document.getElementById('emailDetailPopup');
+      if (oldPopup) oldPopup.remove();
+      const popup = document.createElement('div');
+      popup.id = 'emailDetailPopup';
+      popup.style.position = 'fixed';
+      popup.style.top = '0';
+      popup.style.left = '0';
+      popup.style.width = '100vw';
+      popup.style.height = '100vh';
+      popup.style.background = 'rgba(0,0,0,0.18)';
+      popup.style.display = 'flex';
+      popup.style.alignItems = 'center';
+      popup.style.justifyContent = 'center';
+      popup.style.zIndex = '9999';
+      popup.innerHTML = `
+        <div style="background:#fff;padding:32px 36px;border-radius:14px;min-width:320px;max-width:90vw;max-height:80vh;box-shadow:0 4px 24px #00b49a22;display:flex;flex-direction:column;align-items:flex-start;gap:18px;overflow-y:auto;">
+          <div style='font-size:1.15em;font-weight:bold;color:#0093b4;margin-bottom:4px;'>${mail.subject}</div>
+          <div style='color:#888;font-size:0.95em;margin-bottom:8px;'>${mail.received_at} / ${mail.from_addr}</div>
+          <div style='color:#444;line-height:1.7;white-space:pre-wrap;font-size:1.05em;'>${mail.body ? mail.body : '<i>본문 없음</i>'}</div>
+          <button id='closeEmailDetailPopup' style='margin-top:18px;background:#00b49a;color:#fff;border:none;padding:8px 24px;border-radius:8px;font-size:1em;cursor:pointer;align-self:center;'>닫기</button>
+        </div>
+      `;
+      document.body.appendChild(popup);
+      document.getElementById('closeEmailDetailPopup').onclick = () => popup.remove();
+      popup.onclick = (e) => { if (e.target === popup) popup.remove(); };
     }
 
     // 이벤트 연결 및 초기화
