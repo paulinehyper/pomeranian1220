@@ -138,8 +138,16 @@
       if(!kw) return;
       await window.electronAPI.insertKeyword(kw);
       input.value = '';
+      setTimeout(() => input.focus(), 10);
       loadKeywords();
     };
+
+    // 엔터 입력 시도 추가
+    document.getElementById('keywordInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        document.getElementById('addKeywordBtn').click();
+      }
+    });
     loadKeywords();
   </script>
 </body>

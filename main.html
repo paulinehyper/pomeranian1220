@@ -322,15 +322,22 @@
     }
     function bindKeywordAddEvent() {
       const addBtn = document.getElementById('addKeywordBtn');
-      if (addBtn) {
-        addBtn.onclick = async () => {
-          const input = document.getElementById('keywordInput');
+      const input = document.getElementById('keywordInput');
+      if (addBtn && input) {
+        const addKeyword = async () => {
           const kw = input.value.trim();
           if(!kw) return;
           await window.electronAPI.insertKeyword(kw);
           input.value = '';
           await loadKeywordsToList();
-          alert('키워드가 저장되었습니다.');
+          setTimeout(() => {
+            input.blur();
+            input.focus();
+          }, 100);
+        };
+        addBtn.onclick = addKeyword;
+        input.onkeydown = (e) => {
+          if (e.key === 'Enter') addKeyword();
         };
       }
     }
