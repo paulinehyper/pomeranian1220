@@ -142,6 +142,7 @@
           <input type=\"text\" id=\"keywordInput\" class=\"keyword-input\" placeholder=\"키워드 입력\" style=\"flex:1;padding:6px 8px;border-radius:6px;border:1px solid #7be2c5;\" />
           <button id=\"addKeywordBtn\" class=\"keyword-add-btn\" style=\"background:#e7fffe;color:#00b48a;border:none;padding:6px 18px;border-radius:6px;font-weight:bold;cursor:pointer;transition:background 0.15s;\">추가</button>
         </div>
+        <div id=\"keywordList\" style=\"width:100%;max-width:360px;min-height:32px;margin-bottom:8px;\"></div>
         <div style=\"color:#888;font-size:0.98em;\">여기서 키워드를 관리할 수 있습니다.</div>
         `;
       } else if (idx === 2) {
@@ -302,6 +303,23 @@
     renderMainContent(0);
 
     // 동적으로 삽입된 키워드 관리 입력란 이벤트 연결
+    async function loadKeywordsToList() {
+      if (!window.electronAPI.getKeywords) return;
+      const res = await window.electronAPI.getKeywords();
+      const list = document.getElementById('keywordList');
+      if (!list) return;
+      list.innerHTML = '';
+      if(res.success && res.keywords.length > 0) {
+        res.keywords.forEach(kw => {
+          const div = document.createElement('div');
+          div.className = 'keyword-item';
+          div.textContent = kw;
+          list.appendChild(div);
+        });
+      } else {
+        list.innerHTML = '<div style="color:#bbb;">(등록된 키워드 없음)</div>';
+      }
+    }
     function bindKeywordAddEvent() {
       const addBtn = document.getElementById('addKeywordBtn');
       if (addBtn) {
@@ -311,13 +329,17 @@
           if(!kw) return;
           await window.electronAPI.insertKeyword(kw);
           input.value = '';
+          await loadKeywordsToList();
           alert('키워드가 저장되었습니다.');
         };
       }
     }
     // 화면 전환 시마다 이벤트 연결
     function afterContentChange(idx) {
-      if (idx === 1) bindKeywordAddEvent();
+      if (idx === 1) {
+        bindKeywordAddEvent();
+        loadKeywordsToList();
+      }
     }
     // sidebar 버튼 클릭 시 화면 전환 및 이벤트 연결
     sidebarBtns.forEach((btn, idx) => {

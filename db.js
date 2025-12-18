@@ -65,6 +65,10 @@ CREATE TABLE IF NOT EXISTS keyword (
 `);
 
 // Keyword 전체 조회 함수
+// Keyword 저장 함수
+db.insertKeyword = function(keyword) {
+  return db.prepare('INSERT OR IGNORE INTO keyword (keyword) VALUES (?)').run(keyword);
+};
 db.getAllKeywords = function() {
   return db.prepare('SELECT keyword FROM keyword ORDER BY id DESC').all().map(row => row.keyword);
 };
