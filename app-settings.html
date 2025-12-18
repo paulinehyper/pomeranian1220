@@ -22,6 +22,19 @@
     </div>
     <!-- <div class="settings-title">환경설정</div> -->
     <div class="form-row">
+              <div class="form-row">
+                <label for="protocol">방식/보안</label>
+                <select id="protocol" class="short-input">
+                  <option value="imap">IMAP</option>
+                  <option value="imap-ssl">IMAP(SSL, 993)</option>
+                  <option value="pop3">POP3</option>
+                  <option value="pop3-ssl">POP3(SSL, 995)</option>
+                </select>
+              </div>
+          <div class="form-row">
+            <label for="imapPort">IMAP 포트</label>
+            <input type="number" id="imapPort" class="short-input" placeholder="예: 143 또는 993" min="1" max="65535" />
+          </div>
       <label for="autoLaunchChk">시작 시 자동실행</label>
       <input type="checkbox" id="autoLaunchChk" />
     </div>
