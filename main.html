@@ -134,9 +134,16 @@
     function renderMainContent(idx) {
       let contentHtml = "";
       if (idx === 0) {
-        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🏠 홈(Home) 화면</h2><p>이곳은 홈 화면입니다.</p>`;
+        contentHtml = `<h2 id=\"mainTitle\" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🏠 홈(Home) 화면</h2><p>이곳은 홈 화면입니다.</p>`;
       } else if (idx === 1) {
-        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🔑 키워드 관리</h2><p>여기서 키워드를 관리할 수 있습니다.</p>`;
+        contentHtml = `
+        <h2 id=\"mainTitle\" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🔑 키워드 관리</h2>
+        <div class=\"keyword-input-row\" style=\"width:100%;max-width:360px;display:flex;gap:8px;margin-bottom:12px;\">
+          <input type=\"text\" id=\"keywordInput\" class=\"keyword-input\" placeholder=\"키워드 입력\" style=\"flex:1;padding:6px 8px;border-radius:6px;border:1px solid #7be2c5;\" />
+          <button id=\"addKeywordBtn\" class=\"keyword-add-btn\" style=\"background:#e7fffe;color:#00b48a;border:none;padding:6px 18px;border-radius:6px;font-weight:bold;cursor:pointer;transition:background 0.15s;\">추가</button>
+        </div>
+        <div style=\"color:#888;font-size:0.98em;\">여기서 키워드를 관리할 수 있습니다.</div>
+        `;
       } else if (idx === 2) {
         contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>📧 이메일 목록 <span id='emailCount' style='font-size:0.9em;color:#0093b4;'></span></h2><div id='emailListLoading' style='color:#888;margin-bottom:12px;'>메일 목록을 불러오는 중...</div><ul id='emailList' style='padding:0;list-style:none;max-height:420px;overflow-y:auto;border:1px solid #e0e0e0;background:#f8fffd;'></ul>`;
       } else if (idx === 3) {
@@ -293,6 +300,34 @@
 
     // 첫 화면 초기화
     renderMainContent(0);
+
+    // 동적으로 삽입된 키워드 관리 입력란 이벤트 연결
+    function bindKeywordAddEvent() {
+      const addBtn = document.getElementById('addKeywordBtn');
+      if (addBtn) {
+        addBtn.onclick = async () => {
+          const input = document.getElementById('keywordInput');
+          const kw = input.value.trim();
+          if(!kw) return;
+          await window.electronAPI.insertKeyword(kw);
+          input.value = '';
+          alert('키워드가 저장되었습니다.');
+        };
+      }
+    }
+    // 화면 전환 시마다 이벤트 연결
+    function afterContentChange(idx) {
+      if (idx === 1) bindKeywordAddEvent();
+    }
+    // sidebar 버튼 클릭 시 화면 전환 및 이벤트 연결
+    sidebarBtns.forEach((btn, idx) => {
+      btn.onclick = () => {
+        renderMainContent(idx);
+        afterContentChange(idx);
+      };
+    });
+    // 첫 화면 진입 시 이벤트 연결
+    afterContentChange(0);
   </script>
 </body>
 </html>
