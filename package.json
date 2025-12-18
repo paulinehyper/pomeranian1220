@@ -1,0 +1,42 @@
+{
+  "name": "schedule-widget",
+  "version": "1.0.0",
+  "description": "윈도우 스티커 메모장 스타일의 Electron 스케줄 위젯",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "author": "",
+  "license": "MIT",
+  "build": {
+    "appId": "com.pomeranianelect1212.schedulewidget",
+    "productName": "PomeranianElect1212",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!todo.db"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/app.ico"
+    }
+  },
+  "devDependencies": {
+    "electron": "^30.5.1",
+    "electron-builder": "^26.0.12",
+    "electron-rebuild": "^3.2.9"
+  },
+  "dependencies": {
+    "auto-launch": "^5.0.6",
+    "better-sqlite3": "^12.5.0",
+    "html-to-text": "^9.0.5",
+    "iconv-lite": "^0.7.1",
+    "imap-simple": "^5.1.0",
+    "mailparser": "^3.9.1",
+    "onnxruntime-node": "^1.23.2",
+    "poplib": "^0.1.7"
+  }
+}

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Main 위젯</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif;
+    }
+    .widget-home {
+      position: fixed;
+      top: 40px;
+      left: 40px;
+      width: 420px;
+      min-height: 540px;
+      background: #f8fffd;
+      border-radius: 18px;
+      box-shadow: 0 4px 32px #00b49a22, 0 1.5px 0 #00b49a11;
+      overflow: hidden;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+    }
+    .widget-home-header {
+      position: relative;
+      height: 64px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      box-shadow: 0 2px 8px #00b49a11;
+      font-size: 1.25em;
+      font-weight: bold;
+      color: #00b49a;
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+    .widget-home-header * {
+      -webkit-app-region: no-drag;
+    }
+    .widget-home-sidebar {
+      position: absolute;
+      top: 64px;
+      left: 0;
+      width: 54px;
+      height: calc(100% - 64px);
+      background: #f8fffd;
+      box-shadow: 2px 0 8px #00b49a11;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding-top: 18px;
+      z-index: 2;
+    }
+    .widget-home-main {
+      margin-left: 54px;
+      padding: 32px 18px 18px 18px;
+      min-height: 400px;
+      background: #f8fffd;
+      flex: 1;
+      z-index: 1;
+    }
+    .widget-home-sidebar button {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      margin-bottom: 8px;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .widget-home-sidebar svg {
+      width: 22px;
+      height: 22px;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget-home">
+    <div class="widget-home-header">
+      <span style="display:inline-flex;align-items:center;gap:8px;">
+        <img src="assets/icon.png" alt="앱 아이콘" style="width:28px;height:28px;vertical-align:middle;margin-right:4px;border-radius:7px;box-shadow:0 1px 4px #00b49a22;" />
+        Main
+      </span>
+      <div>
+        <button id="closeBtn" title="닫기" style="background:transparent;border:none;font-size:1.5em;color:#00b49a;cursor:pointer;">×</button>
+      </div>
+    </div>
+    <div class="widget-home-sidebar">
+      <button title="홈">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 11.5L12 4l9 7.5" stroke="#00b48a" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="6.5" y="11.5" width="11" height="7" rx="2" stroke="#00b48a" stroke-width="2" fill="#e6fff7"/>
+        </svg>
+      </button>
+      <button title="키워드 관리">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="7" width="12" height="6" rx="2" fill="#fff" stroke="#00b48a" stroke-width="1.5"/>
+          <rect x="10.5" y="8.5" width="1.2" height="3.5" rx="0.6" fill="#7affe4"/>
+        </svg>
+      </button>
+      <button title="이메일 연동">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2.5" y="5" width="15" height="10" rx="2" stroke="#00b48a" stroke-width="1.5" fill=""/>
+          <path d="M3.5 6l6.5 6 6.5-6" stroke="#00b48a" stroke-width="1.5" fill="none"/>
+        </svg>
+      </button>
+      <button title="환경설정">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 6.5v-2M10 15.5v-2M13.5 10h2M4.5 10h2M13.03 13.03l1.42 1.42M5.55 5.55l1.42 1.42M13.03 6.97l1.42-1.42M5.55 14.45l1.42-1.42" stroke="#00b48a" stroke-width="1.2" stroke-linecap="round"/>
+          <circle cx="10" cy="10" r="2.2" stroke="#00b48a" stroke-width="1.2" fill="#e6fff7"/>
+        </svg>
+      </button>
+    </div>
+    <div class="widget-home-main" id="widgetHomeMain">
+      <h2 id="mainTitle" style="color:#00b49a;margin:0 0 18px 0;font-size:1.2em;">Main</h2>
+      <!-- 위젯 메인 컨텐츠 영역 -->
+    </div>
+  </div>
+  <script>
+    // robust sidebar switching and event binding
+    const sidebarBtns = document.querySelectorAll('.widget-home-sidebar button');
+    const widgetMain = document.getElementById('widgetHomeMain');
+
+    function renderMainContent(idx) {
+      let contentHtml = "";
+      if (idx === 0) {
+        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🏠 홈(Home) 화면</h2><p>이곳은 홈 화면입니다.</p>`;
+      } else if (idx === 1) {
+        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🔑 키워드 관리</h2><p>여기서 키워드를 관리할 수 있습니다.</p>`;
+      } else if (idx === 2) {
+        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>📧 이메일 연동</h2><p>이메일 연동 설정 및 정보를 확인하세요.</p>`;
+      } else if (idx === 3) {
+        contentHtml = `
+        <h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>⚙️ 환경설정</h2>
+        <form id='mailSettingsForm' style='display:flex;flex-direction:column;gap:18px;align-items:stretch;margin-top:18px;max-width:340px;margin-left:auto;margin-right:auto;'>
+          <div style='display:flex;flex-direction:column;gap:8px;'>
+            <label style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>방식/보안</label>
+            <select id='protocolSecurity' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;'>
+              <option value='pop3-secure'>POP3 (보안, 995)</option>
+              <option value='custom'>사용자 입력</option>
+            </select>
+            <div id='customPortDiv' style='display:none;flex-direction:column;gap:8px;margin-top:8px;'>
+              <label for='customPort' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>포트</label>
+              <input id='customPort' type='number' placeholder='포트번호 입력' min='1' max='65535' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
+            </div>
+          </div>
+          <div style='display:flex;flex-direction:column;gap:8px;'>
+            <label for='host' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>서버</label>
+            <input id='host' type='text' placeholder='mail.example.com' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
+          </div>
+          <div style='display:flex;flex-direction:column;gap:8px;'>
+            <label for='mailId' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>아이디</label>
+            <input id='mailId' type='text' placeholder='user@email.com' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
+          </div>
+          <div style='display:flex;flex-direction:column;gap:8px;'>
+            <label for='mailPw' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>비밀번호</label>
+            <input id='mailPw' type='password' placeholder='비밀번호' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
+          </div>
+          <button type='submit' style='margin-top:10px;background:#00b49a;color:#fff;border:none;padding:10px 36px;border-radius:8px;font-weight:bold;font-size:1.1em;cursor:pointer;box-shadow:0 2px 8px #00b49a22;'>저장</button>
+        </form>`;
+      }
+      widgetMain.innerHTML = contentHtml;
+      if (idx === 3) {
+        const protoSecSel = document.getElementById('protocolSecurity');
+        const customPortDiv = document.getElementById('customPortDiv');
+        const mailSettingsForm = document.getElementById('mailSettingsForm');
+        protoSecSel.addEventListener('change', function() {
+          customPortDiv.style.display = (this.value === 'custom') ? 'flex' : 'none';
+        });
+        mailSettingsForm.onsubmit = async (e) => {
+          e.preventDefault();
+          const protocol = document.getElementById('protocolSecurity').value;
+          let port = (protocol === 'pop3-secure') ? 995 : document.getElementById('customPort').value;
+          const settings = {
+            protocol,
+            port,
+            mailId: document.getElementById('mailId').value,
+            mailPw: document.getElementById('mailPw').value,
+            host: document.getElementById('host').value
+          };
+          if (window.electronAPI && window.electronAPI.saveMailSettings) {
+            await window.electronAPI.saveMailSettings(settings);
+            alert('메일 연동 정보가 저장되었습니다.');
+          } else {
+            alert('Electron 환경이 아닙니다.');
+            console.log('Saved data:', settings);
+          }
+        };
+      }
+    }
+
+    // 이벤트 연결 및 초기화
+    sidebarBtns.forEach((btn, idx) => {
+      btn.onclick = () => {
+        renderMainContent(idx);
+      };
+    });
+
+    // 닫기 버튼
+    document.getElementById('closeBtn').onclick = () => {
+      if (window.electronAPI && window.electronAPI.close) {
+        window.electronAPI.close();
+      } else {
+        window.close();
+      }
+    };
+
+    // 첫 화면 초기화
+    renderMainContent(0);
+  </script>
+</body>
+</html>

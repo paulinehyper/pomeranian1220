@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>스케줄 위젯</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="widget">
+    <!-- 플로팅 + 버튼 -->
+    <button id="add-todo-fab" title="할일 추가">+</button>
+    <!-- 할일 입력 모달 -->
+    <div id="add-todo-modal" class="modal" style="display:none;z-index:1300;align-items:center;justify-content:center;">
+      <div style="background:#fff;padding:32px 36px;border-radius:14px;min-width:320px;max-width:90vw;box-shadow:0 4px 24px #00b49c22;display:flex;flex-direction:column;gap:18px;align-items:stretch;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:1.2em;font-weight:bold;color:#00b49c;">할일 추가</span>
+          <button id="close-add-todo-modal" style="background:transparent;border:none;font-size:1.5em;cursor:pointer;">×</button>
+        </div>
+        <input id="add-todo-task" type="text" placeholder="할일 입력" style="font-size:1.1em;padding:8px 12px;border-radius:6px;border:1.5px solid #7be2c5;outline:none;" />
+        <input id="add-todo-deadline" type="date" style="font-size:1em;padding:7px 10px;border-radius:6px;border:1.5px solid #7be2c5;outline:none;" />
+        <button id="save-add-todo" style="background:#00b49f;color:#fff;border:none;padding:10px 0;border-radius:6px;font-weight:bold;font-size:1.1em;cursor:pointer;">저장</button>
+      </div>
+    </div>
+    <div class="header">
+      <span class="drag-title" style="display:inline-flex;align-items:center;gap:8px;">
+        <img src="assets/icon.png" alt="앱 아이콘" style="width:28px;height:28px;vertical-align:middle;margin-right:4px;border-radius:7px;box-shadow:0 1px 4px #00b49a22;" />
+        To-do
+        <span id="todo-count-badge" style="display:inline-block;vertical-align:middle;width:26px;height:26px;border-radius:50%;background:#00b49a;color:#fff;font-weight:bold;text-align:center;line-height:26px;font-size:1.1em;box-shadow:0 1px 4px #00b49a22;margin-left:8px;">0</span>
+      </span>
+      <div class="header-right">
+        <button class="completed-btn" title="완료된 할일 보기" style="background:transparent;border:none;cursor:pointer;margin-left:8px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="#4caf50" stroke-width="2" fill="#e8f5e9"/>
+            <path d="M7 13l3 3 7-7" stroke="#388e3c" stroke-width="2" fill="none"/>
+          </svg>
+        </button>
+        <div class="window-controls">
+          <button class="min-btn" title="최소화">_</button>
+          <button class="close-btn" title="닫기">×</button>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-icons">
+      <button class="refresh-btn" title="새로고침">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.65 6.35A8 8 0 1 0 20 12" stroke="#00b48a" stroke-width="2" fill="none" stroke-linecap="round"/><polyline points="20,4 20,8 16,8" stroke="#00b48a" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="keyword-btn" title="키워드 관리">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- 입력란(텍스트필드) -->
+          <rect x="4" y="7" width="12" height="6" rx="2" fill="#fff" stroke="#00b48a" stroke-width="1.5"/>
+          <!-- 커서 -->
+          <rect x="10.5" y="8.5" width="1.2" height="3.5" rx="0.6" fill="#7affe4"/>
+        </svg>
+      </button>
+      <button class="settings-btn" title="이메일 연동">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2.5" y="5" width="15" height="10" rx="2" stroke="#00b48a" stroke-width="1.5" fill=""/>
+          <path d="M3.5 6l6.5 6 6.5-6" stroke="#00b48a" stroke-width="1.5" fill="none"/>
+        </svg>
+      </button>
+      <button class="cog-btn" title="환경설정" style="background:transparent;border:none;padding:0;box-shadow:none;">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 6.5v-2M10 15.5v-2M13.5 10h2M4.5 10h2M13.03 13.03l1.42 1.42M5.55 5.55l1.42 1.42M13.03 6.97l1.42-1.42M5.55 14.45l1.42-1.42" stroke="#00b48a" stroke-width="1.2" stroke-linecap="round"/>
+          <circle cx="10" cy="10" r="2.2" stroke="#00b48a" stroke-width="1.2" fill="#e6fff7"/>
+        </svg>
+      </button>
+    </div>
+    <div class="main-body-row">
+      <div class="sidebar-icons-spacer"></div>
+      <ul class="schedule-list">
+        <!-- 동적 렌더링 -->
+      </ul>
+    </div>
+  </div>
+  <script>
+    document.querySelector('.min-btn').onclick = () => window.electronAPI.minimize();
+    document.querySelector('.close-btn').onclick = () => window.electronAPI.close();
+    // 환경설정 모달 열기/닫기
+    document.querySelector('.settings-btn').onclick = () => {
+      window.electronAPI.openSettings();
+    };
+    // 키워드 관리 창 열기
+    document.querySelector('.keyword-btn').onclick = () => {
+      window.electronAPI.openKeyword();
+    };
+    // 연동 상태 예시(실제 연동 시 동적으로 변경)
+    // document.getElementById('syncStatusModal').textContent = '연동 중...';
+    // document.getElementById('syncStatusModal').textContent = '연동완료!';
+    // document.getElementById('syncStatusModal').textContent = '미연동!';
+  </script>
+  <div id="completed-modal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#fff;padding:24px 32px;border-radius:12px;min-width:320px;max-width:90vw;max-height:80vh;overflow:auto;box-shadow:0 4px 24px #0002;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span style="font-size:1.2em;font-weight:bold;">완료된 할일 목록</span>
+        <button id="close-completed-modal" style="background:transparent;border:none;font-size:1.5em;cursor:pointer;">×</button>
+      </div>
+      <ul id="completed-list" style="padding:0;list-style:none;"></ul>
+    </div>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>

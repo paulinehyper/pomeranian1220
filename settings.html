@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>환경설정</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    html, body {
+      background: transparent;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    .modal-content { min-width: 0; min-height: 0; margin: 0; box-shadow: none; border: none; padding: 0; background: none; }
+  </style>
+</head>
+<body>
+    <div class="settings-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-evenly;margin-bottom:8px;">
+        <span class="modal-title settings-drag-title" style="font-size:1.2em;">이메일 연동 설정</span>
+        <div style="position:relative;width:100%;">
+          <button id="close-settings-modal" style="position:absolute;top:2px;right:16px;background:transparent;border:none;font-size:1.7em;cursor:pointer;color:#028b6b;line-height:1;-webkit-app-region: no-drag;z-index:10;">×</button>
+          <span class="sync-status-modal" id="syncStatusModal" style="display:block;margin-top:32px;text-align:right;"></span>
+        </div>
+      </div>
+      <form id="mailForm">
+            
+      <div class="form-row">
+        <label>메일 종류</label>
+        <select id="mailType" class="short-input">
+          <option value="naver">Naver</option>
+          <option value="gmail">Gmail</option>
+          <option value="custom">사용자선택</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>연동 방식</label>
+        <select id="protocol" class="short-input">
+          <option value="imap-ssl">IMAP(SSL, 993)</option>
+          <option value="imap">IMAP(일반, 143)</option>
+          <option value="pop3-ssl">POP3(SSL, 995)</option>
+          <option value="pop3">POP3(일반, 110)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label for="host">호스트(Host)</label>
+        <input type="text" id="host" class="short-input" placeholder="예: imap.example.com" autocomplete="off" />
+      </div>
+      <div class="form-row">
+        <label>아이디</label>
+        <input type="text" id="mailId" required class="short-input" placeholder="예: mailid@example.com" />
+      </div>
+      <div class="form-row">
+        <label>비밀번호</label>
+        <input type="password" id="mailPw" required class="short-input" />
+      </div>
+      <div class="form-row">
+        <label>수신일(이후)</label>
+        <input type="date" id="mailSince" class="short-input" style="width:160px;" inputmode="numeric" pattern="[0-9]*" />
+      </div>
+      <div class="form-row">
+        <button type="submit" class="connect-btn">연동하기</button>
+        <button type="button" id="viewEmailsBtn" class="connect-btn" style="margin-left:12px;opacity:0.5;pointer-events:none;">메일보기</button>
+      </div>
+    </form>
+  </div>
+  <script>
+                    // POP3 연결 거부(ECONNREFUSED) 안내 모달 생성 함수
+                    function showPop3ConnRefusedModal() {
+                      const oldModal = document.getElementById('pop3ConnRefusedModal');
+                      if (oldModal) oldModal.remove();
+                      const modal = document.createElement('div');
+                      modal.id = 'pop3ConnRefusedModal';
+                      modal.style.position = 'fixed';
+                      modal.style.top = '0';
+                      modal.style.left = '0';
+                      modal.style.width = '100vw';
+                      modal.style.height = '100vh';
+                      modal.style.background = 'rgba(0,0,0,0.18)';
+                      modal.style.display = 'flex';
+                      modal.style.alignItems = 'center';
+                      modal.style.justifyContent = 'center';
+                      modal.style.zIndex = '9999';
+                      modal.innerHTML = `
+                        <div style="background:#fff;padding:32px 36px;border-radius:14px;min-width:320px;max-width:90vw;box-shadow:0 4px 24px #e74c3c22;display:flex;flex-direction:column;align-items:center;gap:18px;">
+                          <img src="assets/icon.png" alt="앱 아이콘" style="width:56px;height:56px;margin-bottom:8px;" />
+                          <div style="font-size:1.1em;color:#e74c3c;font-weight:bold;text-align:center;">POP3 서버 연결 실패</div>
+                          <div style="color:#444;text-align:center;line-height:1.6;">메일 서버 주소 또는 포트가 잘못되었거나<br>서버가 응답하지 않습니다.<br>메일 서버 주소와 포트를 다시 확인해 주세요.</div>
+                          <button id="closePop3ConnRefusedModal" style="margin-top:12px;background:#e74c3c;color:#fff;border:none;padding:8px 24px;border-radius:8px;font-size:1em;cursor:pointer;">확인</button>
+                        </div>
+                      `;
+                      document.body.appendChild(modal);
+                      document.getElementById('closePop3ConnRefusedModal').onclick = () => {
+                        modal.remove();
+                      };
+                    }
+                // 인증정보 오류 안내 모달 생성 함수
+                function showInvalidCredsModal() {
+                  const oldModal = document.getElementById('invalidCredsModal');
+                  if (oldModal) oldModal.remove();
+                  const modal = document.createElement('div');
+                  modal.id = 'invalidCredsModal';
+                  modal.style.position = 'fixed';
+                  modal.style.top = '0';
+                  modal.style.left = '0';
+                  modal.style.width = '100vw';
+                  modal.style.height = '100vh';
+                  modal.style.background = 'rgba(0,0,0,0.18)';
+                  modal.style.display = 'flex';
+                  modal.style.alignItems = 'center';
+                  modal.style.justifyContent = 'center';
+                  modal.style.zIndex = '9999';
+                  modal.innerHTML = `
+                    <div style="background:#fff;padding:32px 36px;border-radius:14px;min-width:320px;max-width:90vw;box-shadow:0 4px 24px #00b49c22;display:flex;flex-direction:column;align-items:center;gap:18px;">
+                      <img src="assets/icon.png" alt="앱 아이콘" style="width:56px;height:56px;margin-bottom:8px;" />
+                      <div style="font-size:1.1em;color:#e74c3c;font-weight:bold;text-align:center;">메일 인증 실패</div>
+                      <div style="color:#444;text-align:center;line-height:1.6;">메일 아이디, 비밀번호(앱 비밀번호)를<br>다시 한 번 정확히 입력해 주세요.</div>
+                      <button id="closeInvalidCredsModal" style="margin-top:12px;background:#00b49c;color:#fff;border:none;padding:8px 24px;border-radius:8px;font-size:1em;cursor:pointer;">확인</button>
+                    </div>
+                  `;
+                  document.body.appendChild(modal);
+                  document.getElementById('closeInvalidCredsModal').onclick = () => {
+                    modal.remove();
+                  };
+                }
+            // 메일 종류/연동 방식에 따라 메일 서버 자동 입력
+            // 메일 서버 자동입력/자동완성 기능 제거 (host 입력란만 사용)
+        // ...기존 코드 유지 (자동실행 관련 코드 제거)
+    document.getElementById('close-settings-modal').onclick = () => {
+      window.close();
+    };
+    const form = document.getElementById('mailForm');
+    const syncStatus = document.getElementById('syncStatusModal');
+    const viewEmailsBtn = document.getElementById('viewEmailsBtn');
+
+    // 앱 실행 시 mail_settings 정보 불러와 입력란 자동 채움
+    window.electronAPI.getMailSettings().then(settings => {
+      if (settings) {
+        document.getElementById('mailType').value = settings.mail_type || 'naver';
+        document.getElementById('protocol').value = settings.protocol || 'imap-ssl';
+        document.getElementById('mailId').value = settings.mail_id || '';
+        document.getElementById('mailPw').value = settings.mail_pw || '';
+        document.getElementById('mailSince').value = settings.mail_since || '';
+        document.getElementById('host').value = settings.host || '';
+        viewEmailsBtn.style.opacity = 1;
+        viewEmailsBtn.style.pointerEvents = 'auto';
+      }
+    });
+
+    // 앱 비밀번호 안내 모달 생성 함수 (위로 이동)
+    function showAppPasswordModal() {
+      // 기존 모달이 있으면 제거
+      const oldModal = document.getElementById('appPwModal');
+      if (oldModal) oldModal.remove();
+      const modal = document.createElement('div');
+      modal.id = 'appPwModal';
+      modal.style.position = 'fixed';
+      modal.style.top = '0';
+      modal.style.left = '0';
+      modal.style.width = '100vw';
+      modal.style.height = '100vh';
+      modal.style.background = 'rgba(0,0,0,0.18)';
+      modal.style.display = 'flex';
+      modal.style.alignItems = 'center';
+      modal.style.justifyContent = 'center';
+      modal.style.zIndex = '9999';
+      modal.innerHTML = `
+        <div style="background:#fff;padding:32px 36px;border-radius:14px;min-width:320px;max-width:90vw;box-shadow:0 4px 24px #00b49c22;display:flex;flex-direction:column;align-items:center;gap:18px;">
+          <img src="assets/icon.png" alt="앱 아이콘" style="width:56px;height:56px;margin-bottom:8px;" />
+          <div style="font-size:1.1em;color:#0093b4;font-weight:bold;text-align:center;">구글 계정은 앱 비밀번호가 필요합니다</div>
+          <div style="color:#444;text-align:center;line-height:1.6;">앱 비밀번호를 발급받아<br>비밀번호 칸에 입력해 주세요.<br><a href='https://support.google.com/accounts/answer/185833' target='_blank' style='color:#00b49c;text-decoration:underline;'>앱 비밀번호 발급 방법 안내</a></div>
+          <button id="closeAppPwModal" style="margin-top:12px;background:#00b49c;color:#fff;border:none;padding:8px 24px;border-radius:8px;font-size:1em;cursor:pointer;">확인</button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      document.getElementById('closeAppPwModal').onclick = () => {
+        modal.remove();
+      };
+    }
+
+    const connectBtn = document.querySelector('.connect-btn[type="submit"]');
+    let isSyncing = false;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!isSyncing) {
+        // 연동 시작
+        isSyncing = true;
+        connectBtn.textContent = '연동중지';
+        syncStatus.textContent = '연동 중...';
+        syncStatus.style.color = '#e67e22';
+        await window.electronAPI.startMailSync();
+        const mailType = document.getElementById('mailType').value;
+        const protocol = document.getElementById('protocol').value;
+        const mailId = document.getElementById('mailId').value;
+        const mailPw = document.getElementById('mailPw').value;
+        const mailSince = document.getElementById('mailSince').value;
+        const host = document.getElementById('host').value;
+        const info = { mailType, protocol, mailId, mailPw, mailSince, host };
+        await window.electronAPI.saveMailSettings(info);
+        try {
+          const result = await window.electronAPI.mailConnect(info);
+          if(result.message && result.message.includes('Application-specific password required')) {
+            syncStatus.textContent = '';
+            showAppPasswordModal();
+          } else if(result.message && (result.message.includes('Invalid credentials') || result.message.includes('Authentication failed'))) {
+            syncStatus.textContent = '';
+            showInvalidCredsModal();
+          } else if(result.message && result.message.includes('ECONNREFUSED')) {
+            syncStatus.textContent = '';
+            showPop3ConnRefusedModal();
+          } else {
+            syncStatus.textContent = result.message;
+            syncStatus.style.color = result.success ? '#27ae60' : '#e74c3c';
+            if(result.success) {
+              viewEmailsBtn.style.opacity = 1;
+              viewEmailsBtn.style.pointerEvents = 'auto';
+            }
+            if(result.message && result.message.includes('Unable to login')) {
+              alert('이메일 연동을 해주세요.\n(메일 계정/비밀번호/설정 확인 필요)');
+            }
+          }
+        } catch (err) {
+          if(err && err.message && err.message.includes('Application-specific password required')) {
+            syncStatus.textContent = '';
+            showAppPasswordModal();
+          } else if(err && err.message && (err.message.includes('Invalid credentials') || err.message.includes('Authentication failed'))) {
+            syncStatus.textContent = '';
+            showInvalidCredsModal();
+          } else if(err && err.message && err.message.includes('ECONNREFUSED')) {
+            syncStatus.textContent = '';
+            showPop3ConnRefusedModal();
+          } else {
+            syncStatus.textContent = '연동실패: ' + err.message;
+            syncStatus.style.color = '#e74c3c';
+            if(err && err.message && err.message.includes('Unable to login')) {
+              alert('이메일 연동을 해주세요.\n(메일 계정/비밀번호/설정 확인 필요)');
+            }
+          }
+        }
+      } else {
+        // 연동 중지
+        isSyncing = false;
+        connectBtn.textContent = '연동하기';
+        syncStatus.textContent = '연동이 중지되었습니다.';
+        syncStatus.style.color = '#888';
+        await window.electronAPI.stopMailSync();
+      }
+    });
+    viewEmailsBtn.addEventListener('click', () => {
+      window.electronAPI.openEmails();
+    });
+  </script>
+</body>
+</html>

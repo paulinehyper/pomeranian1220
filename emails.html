@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>메일 목록</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+        .subject-cell {
+          color: #222;
+          text-decoration: underline;
+          cursor: pointer;
+          background: #fff;
+        }
+    body { background: #618082; }
+    .emails-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; }
+    .emails-table th, .emails-table td { border: 1px solid #e0e0e0; padding: 8px; font-size: 0.95em; background: #f9f9f9; color: #222; }
+    .emails-table th { background: #f3f3f3; color: #636262; }
+    .emails-table tr:nth-child(even) { background: #fff; }
+    .emails-table tr:hover { background: #eaf6ff; color: #222; }
+    .emails-header { font-size: 1.2em; font-weight: bold; margin-top: 10px; color: #222; }
+    /* 모달용 */
+    #mailModal { background: rgba(213, 228, 227, 0.32)!important; }
+    #mailModalContent { background: #fff!important; color: #222!important; }
+    #closeMailModal { color: #333!important; }
+    #mailModalContent h2 { color: #222!important; }
+    #mailModalContent pre { background: #fff!important; color: #222; }
+  </style>
+</head>
+<body>
+  <div class="modal-content">
+    <div class="emails-header">저장된 메일 목록</div>
+    <table class="emails-table" id="emailsTable">
+      <thead>
+        <tr>
+          <th>수신일</th>
+          <th>제목</th>
+          <th>발신자</th>
+          <th>To-Do <input type="checkbox" id="checkAllTodos" style="vertical-align:middle;" title="전체 선택/해제"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- JS로 메일 목록 렌더링 -->
+      </tbody>
+    </table>
+  </div>
+  <!-- 메일 본문 모달 -->
+  <div id="mailModal" style="display:none;position:fixed;z-index:9999;left:0;top:0;width:100vw;height:100vh;background:rgba(240, 252, 228, 0.32);align-items:center;justify-content:center;">
+    <div id="mailModalContent" style="background:#fff;color:#222;padding:32px 28px 24px 28px;border-radius:12px;box-shadow:0 4px 32px #9bf8a955;max-width:600px;width:90vw;max-height:80vh;overflow:auto;position:relative;">
+      <button id="closeMailModal" style="position:absolute;top:12px;right:16px;font-size:1.3em;background:none;border:none;color:#333;cursor:pointer;">&times;</button>
+      <h2 id="modalSubject" style="color:#222;margin-top:0;"></h2>
+      <div style="margin-bottom:8px;"><b>From:</b> <span id="modalFrom" style="color:#222;"></span></div>
+      <div style="margin-bottom:8px;"><b>Date:</b> <span id="modalDate" style="color:#222;"></span></div>
+      <hr/>
+      <pre id="modalBody" style="white-space:pre-wrap;word-break:break-all;background:#fff;padding:0;margin:0;color:#222;"></pre>
+    </div>
+  </div>
+  <script>
+    function renderEmails(emails) {
+      // todo_flag가 1(체크된) 메일을 먼저, 0(미체크)은 뒤로 정렬
+      emails = [...emails].sort((a, b) => {
+        if (a.todo_flag === b.todo_flag) return 0;
+        return a.todo_flag ? -1 : 1;
+      });
+      // 전체선택 체크박스 상태 동기화 (모든 메일이 체크되어 있으면 전체선택도 체크)
+      setTimeout(() => {
+        const allCbs = document.querySelectorAll('#emailsTable tbody input[type="checkbox"]');
+        const checkAll = document.getElementById('checkAllTodos');
+        if (checkAll && allCbs.length) {
+          const checkedCount = Array.from(allCbs).filter(cb => cb.checked).length;
+          checkAll.checked = (checkedCount === allCbs.length);
+          checkAll.indeterminate = (checkedCount > 0 && checkedCount < allCbs.length);
+        }
+      }, 50);
+      const tbody = document.getElementById('emailsTable').querySelector('tbody');
+      tbody.innerHTML = '';
+      emails.forEach(mail => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${mail.received_at}</td>
+          <td class="subject-cell">${mail.subject}</td>
+          <td>${mail.from_addr}</td>
+          <td><input type="checkbox" ${mail.todo_flag ? 'checked' : ''} data-id="${mail.id}" /></td>
+        `;
+        tbody.appendChild(tr);
+        // 본문 펼침용 row
+        const bodyTr = document.createElement('tr');
+        bodyTr.style.display = 'none';
+        const bodyTd = document.createElement('td');
+        bodyTd.colSpan = 4;
+        bodyTd.style.background = '#fffbe7';
+        bodyTd.style.color = '#333';
+        bodyTd.style.fontSize = '0.97em';
+        bodyTd.style.padding = '12px 16px';
+        bodyTd.textContent = mail.body || '(본문 없음)';
+        bodyTr.appendChild(bodyTd);
+        tbody.appendChild(bodyTr);
+        // 제목 클릭시 본문 토글
+        tr.querySelector('.subject-cell').addEventListener('click', () => {
+          // 모달에 본문 표시
+          document.getElementById('modalSubject').textContent = mail.subject;
+          document.getElementById('modalFrom').textContent = mail.from_addr;
+          document.getElementById('modalDate').textContent = mail.received_at;
+          // HTML 본문 자동 렌더링 (XSS 방지: 신뢰된 메일만 사용 권장)
+          let body = mail.body || '';
+          // quoted-printable, base64 등 인코딩된 경우 디코딩 시도 (간단 버전)
+          function decodeQP(str) {
+            return str.replace(/=([A-Fa-f0-9]{2})/g, (m, hex) => String.fromCharCode(parseInt(hex,16))).replace(/=\r?\n/g, '');
+          }
+          function isBase64(str) {
+            // base64는 4의 배수 길이, 알파벳/숫자/+/=만 포함
+            return /^[A-Za-z0-9+/=\r\n]+$/.test(str) && str.length > 32 && str.length % 4 === 0;
+          }
+          function decodeBase64(str) {
+            try {
+              // 줄바꿈 제거 후 디코딩
+              return decodeURIComponent(escape(window.atob(str.replace(/\s+/g, ''))));
+            } catch (e) { return str; }
+          }
+          if (/<!DOCTYPE|<html|<body|<table|<div|<span|<p|<br|<img|<a/i.test(body)) {
+            // HTML 본문: 그대로 렌더링
+            document.getElementById('modalBody').innerHTML = body;
+          } else if (/=3D|=20|=09|=0A|=0D/.test(body)) {
+            // quoted-printable 인코딩 추정
+            document.getElementById('modalBody').textContent = decodeQP(body);
+          } else if (isBase64(body)) {
+            // base64 인코딩 추정
+            document.getElementById('modalBody').textContent = decodeBase64(body);
+          } else {
+            // 일반 텍스트: escape
+            document.getElementById('modalBody').textContent = body;
+          }
+          document.getElementById('mailModal').style.display = 'flex';
+          // ESC로 닫기
+          document.onkeydown = function(e) {
+            if (e.key === 'Escape') document.getElementById('mailModal').style.display = 'none';
+          };
+          // 포커스 close 버튼
+          setTimeout(() => { document.getElementById('closeMailModal').focus(); }, 100);
+        });
+      });
+      // 체크박스 이벤트
+      tbody.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', async (e) => {
+          const id = cb.getAttribute('data-id');
+          const flag = cb.checked ? 1 : 0;
+          await window.electronAPI.setEmailTodoFlag(id, flag);
+          // 최신 목록 다시 렌더링
+          const emails = await window.electronAPI.getEmails();
+          renderEmails(emails);
+        });
+      });
+      // 전체선택 체크박스 이벤트
+      const checkAll = document.getElementById('checkAllTodos');
+      if (checkAll) {
+        checkAll.onchange = async function() {
+          const allCbs = document.querySelectorAll('#emailsTable tbody input[type="checkbox"]');
+          // 1. 체크박스 상태를 먼저 일괄 변경 (즉시 UI 반영)
+          allCbs.forEach(cb => { cb.checked = checkAll.checked; });
+          // 2. setEmailTodoFlag를 Promise.all로 병렬 처리
+          const promises = Array.from(allCbs).map(cb => {
+            const id = cb.getAttribute('data-id');
+            const flag = cb.checked ? 1 : 0;
+            return window.electronAPI.setEmailTodoFlag(id, flag);
+          });
+          await Promise.all(promises);
+          // 3. 모든 처리 후 한 번만 새로고침
+          const emails = await window.electronAPI.getEmails();
+          renderEmails(emails);
+        };
+      }
+      // 모달 닫기 버튼 이벤트
+      document.getElementById('closeMailModal').onclick = function() {
+        document.getElementById('mailModal').style.display = 'none';
+      };
+      // 모달 바깥 클릭 시 닫기
+      document.getElementById('mailModal').onclick = function(e) {
+        if (e.target === this) this.style.display = 'none';
+      };
+    }
+    window.electronAPI.getEmails().then(renderEmails);
+    // 1분마다 메일 목록 새로고침
+    setInterval(async () => {
+      const emails = await window.electronAPI.getEmails();
+      if (typeof renderEmails === 'function') renderEmails(emails);
+    }, 60 * 1000);
+  </script>
+</body>
+</html>
