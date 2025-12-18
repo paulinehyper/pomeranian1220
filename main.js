@@ -276,6 +276,10 @@ ipcMain.handle('save-mail-settings', (event, settings) => {
   // Save mail_server and host as well
   const stmt = db.prepare(`INSERT INTO mail_settings (mail_type, protocol, mail_id, mail_pw, mail_since, mail_server, host) VALUES (?, ?, ?, ?, ?, ?, ?)`);
   stmt.run(settings.mailType, settings.protocol, settings.mailId, settings.mailPw, settings.mailSince, settings.mailServer, settings.host);
+  // 저장 후 바로 메일 연동 실행
+  setTimeout(() => {
+    if (typeof syncMail === 'function') syncMail();
+  }, 100);
   return { success: true };
 });
 

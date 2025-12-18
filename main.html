@@ -138,7 +138,7 @@
       } else if (idx === 1) {
         contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🔑 키워드 관리</h2><p>여기서 키워드를 관리할 수 있습니다.</p>`;
       } else if (idx === 2) {
-        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>📧 이메일 연동</h2><p>이메일 연동 설정 및 정보를 확인하세요.</p>`;
+        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>📧 이메일 목록</h2><div id='emailListLoading' style='color:#888;margin-bottom:12px;'>메일 목록을 불러오는 중...</div><ul id='emailList' style='padding:0;list-style:none;'></ul>`;
       } else if (idx === 3) {
         contentHtml = `
         <h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>⚙️ 환경설정</h2>
@@ -173,6 +173,23 @@
         </form>`;
       }
       widgetMain.innerHTML = contentHtml;
+      if (idx === 2) {
+        // 이메일 목록 불러오기
+        if (window.electronAPI && window.electronAPI.getEmails) {
+          window.electronAPI.getEmails().then(emails => {
+            const emailList = document.getElementById('emailList');
+            const loading = document.getElementById('emailListLoading');
+            if (loading) loading.style.display = 'none';
+            if (emailList) {
+              if (emails && emails.length > 0) {
+                emailList.innerHTML = emails.map(mail => `<li style='margin-bottom:14px;padding:12px 16px;background:#fff;border-radius:8px;box-shadow:0 2px 8px #00b49a11;'><div style='font-weight:bold;color:#0093b4;'>${mail.subject}</div><div style='color:#444;font-size:0.98em;margin-top:4px;'>${mail.body ? mail.body.substring(0, 80) + (mail.body.length > 80 ? '...' : '') : ''}</div><div style='color:#888;font-size:0.92em;margin-top:4px;'>${mail.received_at} / ${mail.from_addr}</div></li>`).join('');
+              } else {
+                emailList.innerHTML = `<li style='color:#888;padding:12px;'>불러온 메일이 없습니다.</li>`;
+              }
+            }
+          });
+        }
+      }
       if (idx === 3) {
         const protoSecSel = document.getElementById('protocolSecurity');
         const customPortDiv = document.getElementById('customPortDiv');
