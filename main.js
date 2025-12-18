@@ -15,6 +15,7 @@ ipcMain.on('open-mail-detail', (event, params) => {
     y: bounds.y,
     frame: false,
     resizable: true,
+    movable: true,
     alwaysOnTop: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
