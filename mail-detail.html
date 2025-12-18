@@ -5,6 +5,26 @@
   <title>메일 상세보기</title>
   <link rel="stylesheet" href="style.css">
   <style>
+        .close-x-btn {
+          position: absolute;
+          top: 16px;
+          right: 24px;
+          width: 36px;
+          height: 36px;
+          background: transparent;
+          border: none;
+          color: #00b49a;
+          font-size: 2em;
+          font-weight: bold;
+          cursor: pointer;
+          z-index: 20;
+          -webkit-app-region: no-drag;
+          transition: color 0.2s;
+        }
+        .close-x-btn:hover {
+          color: #0093b4;
+          background: #e6fff7;
+        }
     body { background: #f8fffd; margin: 0; padding: 0; font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif; }
     .mail-detail-wrap {
       max-width: 600px;
@@ -52,9 +72,8 @@
 </head>
 <body>
   <div class="mail-detail-wrap">
-    <div class="mail-detail-header">
-      <span id="mailDetailHeaderTitle">메일 상세보기</span>
-    </div>
+    <button class="close-x-btn" onclick="window.close()" title="닫기">×</button>
+    <div class="mail-detail-header"></div>
     <div class="mail-detail-content">
       <div class="mail-detail-title" id="mailDetailSubject"></div>
       <div class="mail-detail-meta" id="mailDetailMeta"></div>

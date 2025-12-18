@@ -117,11 +117,52 @@
       </button>
     </div>
     <div class="widget-home-main" id="widgetHomeMain">
+      <!-- 메일 할일 카드 -->
+      <div class="widget" id="todo-mail-card" style="margin-bottom:24px;">
+        <div class="header" style="color:#0093b4;">
+          <span>메일 할일 카드</span>
+          <span id="todo-mail-count-badge" style="background:#00b49c;color:#fff;border-radius:8px;padding:2px 10px;font-size:0.95em;margin-left:8px;">0</span>
+        </div>
+        <ul id="todo-mail-list" class="schedule-list" style="min-height:40px;padding-left:0;list-style:none;margin:0;"></ul>
+      </div>
       <h2 id="mainTitle" style="color:#00b49a;margin:0 0 18px 0;font-size:1.2em;">Home</h2>
       <!-- 위젯 메인 컨텐츠 영역 -->
     </div>
   </div>
   <script>
+      // 메일 todo_flag=1 목록 불러와서 카드에 렌더링
+      async function fetchTodoMails() {
+        if (!window.electronAPI.getEmails) return [];
+        const emails = await window.electronAPI.getEmails();
+        return emails.filter(e => e.todo_flag === 1);
+      }
+      function renderTodoMailCard(emails) {
+        const list = document.getElementById('todo-mail-list');
+        const badge = document.getElementById('todo-mail-count-badge');
+        list.innerHTML = '';
+        badge.textContent = emails.length;
+        if (!emails.length) {
+          list.innerHTML = '<li style="color:#888;text-align:center;">할일로 분류된 메일이 없습니다.</li>';
+          return;
+        }
+        emails.forEach(mail => {
+          const li = document.createElement('li');
+          li.style.marginBottom = '8px';
+          li.style.padding = '6px 0';
+          li.style.borderBottom = '1px solid #e6fff7';
+          li.style.cursor = 'pointer';
+          li.textContent = mail.subject;
+          // 클릭 시 메일 상세 열기(옵션)
+          li.onclick = () => {
+            window.electronAPI.openMailDetail && window.electronAPI.openMailDetail({ id: mail.id });
+          };
+          list.appendChild(li);
+        });
+      }
+      document.addEventListener('DOMContentLoaded', async () => {
+        const todoMails = await fetchTodoMails();
+        renderTodoMailCard(todoMails);
+      });
     // robust sidebar switching and event binding
     const sidebarBtns = document.querySelectorAll('.widget-home-sidebar button');
     const widgetMain = document.getElementById('widgetHomeMain');

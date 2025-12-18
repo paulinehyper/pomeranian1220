@@ -103,22 +103,40 @@ function setupMailIpc(main) {
               from = Array.isArray(headerPart.body.from) ? headerPart.body.from[0] : (headerPart.body.from || '');
               date = Array.isArray(headerPart.body.date) ? headerPart.body.date[0] : (headerPart.body.date || '');
             }
-            // 본문 파싱: 항상 simpleParser로 html/text 우선순위 저장
+            // 본문 파싱: quoted-printable 인코딩 자동 디코딩
             let body = '';
             if (textPart && textPart.body) {
               const { simpleParser } = require('mailparser');
               const { htmlToText } = require('html-to-text');
+              const qp = require('quoted-printable');
+              const iconv = require('iconv-lite');
+              let rawBody = textPart.body;
+              // quoted-printable 디코딩 시도
+              if (typeof rawBody === 'string' && /=[0-9A-F]{2}/i.test(rawBody)) {
+                try {
+                  rawBody = qp.decode(rawBody);
+                  // charset 추출 시도 (헤더에서)
+                  let charset = 'utf-8';
+                  if (headerPart && headerPart.body && headerPart.body['content-type']) {
+                    const ct = Array.isArray(headerPart.body['content-type']) ? headerPart.body['content-type'][0] : headerPart.body['content-type'];
+                    const match = ct.match(/charset\s*=\s*"?([a-zA-Z0-9\-]+)"?/i);
+                    if (match && match[1]) charset = match[1].toLowerCase();
+                  }
+                  // iconv로 charset 변환
+                  rawBody = iconv.decode(Buffer.from(rawBody, 'binary'), charset);
+                } catch (e) { /* 무시 */ }
+              }
               try {
-                const parsed = await simpleParser(textPart.body);
+                const parsed = await simpleParser(rawBody);
                 if (parsed.html) {
                   body = htmlToText(parsed.html, { wordwrap: false });
                 } else if (parsed.text) {
                   body = parsed.text;
                 } else {
-                  body = textPart.body.toString();
+                  body = rawBody.toString();
                 }
               } catch (e) {
-                body = textPart.body.toString();
+                body = rawBody.toString();
               }
             }
             const hash = crypto.createHash('sha256').update((subject||'')+(body||'')+(from||'')+(date||'')).digest('hex');

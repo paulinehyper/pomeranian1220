@@ -252,6 +252,9 @@ ipcMain.on('open-keyword', () => {
 ipcMain.handle('insert-keyword', (event, keyword) => {
   try {
     db.insertKeyword(keyword);
+    // 키워드가 포함된 메일 제목을 todo_flag=1로 분류
+    const stmt = db.prepare('UPDATE emails SET todo_flag=1 WHERE subject LIKE ?');
+    stmt.run(`%${keyword}%`);
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
