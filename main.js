@@ -245,9 +245,20 @@ const winIcon = iconPath;
 // 사용자 직접 할일 추가
 ipcMain.handle('insert-todo', (event, { task, deadline, memo }) => {
   try {
-    // deadline이 없으면 null, memo는 빈 문자열 허용, todo_flag=1로 저장
+    // date: 현재 날짜/시간, dday: 마감일 있으면 계산, 없으면 '없음'
+    const now = new Date();
+    const pad = n => n.toString().padStart(2, '0');
+    const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    let dday = '없음';
+    if (deadline) {
+      const deadlineDate = new Date(deadline);
+      if (!isNaN(deadlineDate)) {
+        const diff = Math.ceil((deadlineDate - now) / (1000*60*60*24));
+        dday = diff >= 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
+      }
+    }
     db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag) VALUES (?, ?, ?, ?, ?, 1)')
-      .run(deadline || '', '', task, memo || '', deadline || '');
+      .run(dateStr, dday, task, memo || '', deadline || '');
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };

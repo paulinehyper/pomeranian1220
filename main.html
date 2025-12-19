@@ -136,6 +136,10 @@
         if (idx === 0) {
           contentHtml = `
           <h2 id=\"mainTitle\" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🏠 홈(Home) 화면</h2>
+          <div style="width:100%;max-width:360px;margin:0 auto 12px auto;display:flex;gap:8px;">
+            <input type="text" id="addTodoInput" placeholder="할일 입력" style="flex:1;padding:8px 12px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;" />
+            <button id="addTodoBtn" style="background:#00b49a;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-weight:bold;cursor:pointer;transition:background 0.15s;">추가</button>
+          </div>
           <ul id=\"todoCardList\" class=\"schedule-list\" style=\"padding:0;list-style:none;max-width:360px;margin:0 auto;\"></ul>
           <style>
           .schedule-list li.todo-card {
@@ -214,6 +218,24 @@
       widgetMain.innerHTML = contentHtml;
         // 홈화면 할일 카드(메일 제목만) 렌더링
         if (idx === 0 && window.electronAPI && window.electronAPI.getTodos) {
+          // 할일 추가 버튼 이벤트 연결
+          setTimeout(() => {
+            const addBtn = document.getElementById('addTodoBtn');
+            const addInput = document.getElementById('addTodoInput');
+            if (addBtn && addInput && window.electronAPI && window.electronAPI.insertTodo) {
+              const addTodo = async () => {
+                const task = addInput.value.trim();
+                if (!task) return;
+                await window.electronAPI.insertTodo({ task });
+                addInput.value = '';
+                renderMainContent(0);
+              };
+              addBtn.onclick = addTodo;
+              addInput.onkeydown = (e) => {
+                if (e.key === 'Enter') addTodo();
+              };
+            }
+          }, 100);
           window.electronAPI.getTodos().then(res => {
             const cardList = document.getElementById('todoCardList');
             if (!cardList) return;
