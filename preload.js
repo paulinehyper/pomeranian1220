@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 
 contextBridge.exposeInMainWorld('electronAPI', {
+    addTodoFromMail: (mailId) => ipcRenderer.invoke('add-todo-from-mail', mailId),
   minimize: () => ipcRenderer.send('minimize'),
   close: () => ipcRenderer.send('close'),
   getTodos: () => ipcRenderer.invoke('get-todos'),

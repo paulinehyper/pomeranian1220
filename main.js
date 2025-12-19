@@ -1,8 +1,49 @@
-
-
 const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
 const path = require('path');
 const autoLauncher = require('./auto-launch');
+const db = require('./db');
+const { addTodosFromEmailTodos } = require('./email_todo_flag');
+
+// 이메일 id를 받아 해당 메일을 todo로 분류하는 IPC
+ipcMain.handle('add-todo-from-mail', (event, mailId) => {
+  try {
+    // 1. 해당 메일 todo_flag=1로 변경
+    db.prepare('UPDATE emails SET todo_flag=1 WHERE id=?').run(mailId);
+    // 2. 해당 메일을 todos에 추가 (중복 방지)
+    const mail = db.prepare('SELECT subject, body, deadline, unique_hash FROM emails WHERE id=?').get(mailId);
+    if (!mail) return { success: false, error: '메일을 찾을 수 없음' };
+    // unique_hash가 없으면 메일 기반 아님(추가 안함)
+    if (!mail.unique_hash) return { success: false, error: '메일 기반이 아님' };
+    const exists = db.prepare('SELECT COUNT(*) as cnt FROM todos WHERE task = ? AND todo_flag = 1').get(mail.subject).cnt;
+    if (exists === 0) {
+      const now = new Date();
+      const today = now.toISOString().slice(0, 10);
+      db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag, unique_hash) VALUES (?, ?, ?, ?, ?, 1, ?)')
+        .run(today, '', mail.subject, mail.body || '', mail.deadline || '', mail.unique_hash);
+    }
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+// ...require 구문들...
+// ...existing code...
+
+// ...existing code...
+// ...existing code...
+// ...중복 require 제거, 아래에서 한 번만 선언...
+// ...중복 require 제거, 아래에서 한 번만 선언...
+// ...중복 require 제거, 아래에서 한 번만 선언...
+// 아래 require들은 Electron 객체 선언 이후에 위치해야 안전
+// ...중복 require 제거, 아래에서 한 번만 선언...
+// ...중복 require 제거, 아래에서 한 번만 선언...
+// ...중복 require 제거, 아래에서 한 번만 선언...
+// ...중복 require 제거, 아래에서 한 번만 선언...
+// ...중복 require 제거, 아래에서 한 번만 선언...
+// 아래 require들은 Electron 객체 선언 이후에 위치해야 안전
+// ...중복 require 제거, 아래에서 한 번만 선언...
+// ...중복 require 제거, 아래에서 한 번만 선언...
 
 // 메일 상세보기 창을 mainWindow 오른쪽에 띄우는 IPC 핸들러
 ipcMain.on('open-mail-detail', (event, params) => {
@@ -111,9 +152,6 @@ ipcMain.on('open-app-settings', () => {
   appSettingsWindow.on('closed', () => { appSettingsWindow = null; });
 });
 
-// 자동실행 상태 조회/변경 IPC
-const db = require('./db');
-const { addTodosFromEmailTodos } = require('./email_todo_flag');
 ipcMain.handle('get-auto-launch', async () => {
   try {
     const row = db.prepare('SELECT enabled FROM autoplay WHERE id=1').get();
