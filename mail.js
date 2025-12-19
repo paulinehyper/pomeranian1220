@@ -1,6 +1,7 @@
 const { ipcMain } = require('electron');
 const Imap = require('imap-simple');
 const db = require('./db');
+const tfClassifier = require('./tf_todo_classifier');
 
 function getImapConfig(info) {
   let resolvedHost = '';
@@ -42,6 +43,8 @@ function getImapConfig(info) {
 function setupMailIpc(main) {
   // 내부에서 직접 호출 가능한 syncMail 함수 export
   async function syncMail(info) {
+    // TensorFlow 모델 훈련 (앱 시작 시 1회만 하면 됨, 여기선 매번 호출)
+    await tfClassifier.train();
     console.log('[syncMail] called with info:', info);
     if (info.protocol.startsWith('imap')) {
       const config = getImapConfig(info);
@@ -146,8 +149,15 @@ function setupMailIpc(main) {
               }
             }
             const hash = crypto.createHash('sha256').update((subject||'')+(body||'')+(from||'')+(date||'')).digest('hex');
+            let todoFlag = null;
+            try {
+              // TensorFlow.js로 본문 분류
+              todoFlag = await tfClassifier.predictTodo(subject + ' ' + body);
+            } catch (e) {
+              todoFlag = null;
+            }
             if (!exists.get(hash).cnt) {
-              insert.run(date, subject, body, from, null, hash, extractDeadline(body));
+              insert.run(date, subject, body, from, todoFlag, hash, extractDeadline(body));
             }
           } catch (e) { /* 무시 */ }
         }

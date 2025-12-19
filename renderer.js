@@ -101,11 +101,22 @@ function renderList(todos) {
     return;
   }
   let dragSrcIdx = null;
-  // 데드라인이 빠른 순서로 정렬 (없음/미설정은 맨 뒤)
+  // 이메일(todo_flag 있는 mail- id)은 최신순, 일반 할일은 데드라인순
   const sortedTodos = [...todos].sort((a, b) => {
-    if (!a.deadline || a.deadline === '없음') return 1;
-    if (!b.deadline || b.deadline === '없음') return -1;
-    return new Date(a.deadline) - new Date(b.deadline);
+    const isMailA = typeof a.id === 'string' && a.id.startsWith('mail-');
+    const isMailB = typeof b.id === 'string' && b.id.startsWith('mail-');
+    if (isMailA && isMailB) {
+      // 최신순(내림차순)
+      return new Date(b.received_at || b.deadline || 0) - new Date(a.received_at || a.deadline || 0);
+    } else if (!isMailA && !isMailB) {
+      // 일반 할일: 데드라인 빠른 순
+      if (!a.deadline || a.deadline === '없음') return 1;
+      if (!b.deadline || b.deadline === '없음') return -1;
+      return new Date(a.deadline) - new Date(b.deadline);
+    } else {
+      // 이메일이 위에 오도록
+      return isMailA ? -1 : 1;
+    }
   });
   sortedTodos.forEach((item, idx) => {
     const li = document.createElement('li');
