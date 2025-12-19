@@ -15,7 +15,7 @@
       position: fixed;
       top: 40px;
       left: 40px;
-      width: 420px;
+      width: 500px;
       min-height: 540px;
       background: #f8fffd;
       border-radius: 18px;
@@ -148,10 +148,15 @@
             font-size:1.08em;
             color:#0093b4;
             font-weight:bold;
-            transition:box-shadow 0.15s;
+            transition:box-shadow 0.15s, text-decoration 0.15s, color 0.15s;
+            cursor:pointer;
           }
           .schedule-list li.todo-card:hover {
             box-shadow:0 4px 16px #00b49a22;
+          }
+          .schedule-list li.todo-card.done {
+            text-decoration: line-through;
+            color: #aaa;
           }
           </style>
           `;
@@ -210,6 +215,12 @@
               cardList.innerHTML = res.map(todo => `
                 <li class='todo-card'>${todo.task || '(제목 없음)'}</li>
               `).join('');
+              // 할일 카드 클릭 시 취소선 토글
+              cardList.querySelectorAll('.todo-card').forEach(card => {
+                card.addEventListener('click', function() {
+                  this.classList.toggle('done');
+                });
+              });
             } else {
               cardList.innerHTML = `<li style='color:#bbb;text-align:center;padding:24px 0;'>등록된 할일이 없습니다.</li>`;
             }

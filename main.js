@@ -408,8 +408,8 @@ ipcMain.on('open-emails', () => {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 900,
-    minWidth: 600,
+    width: 1500, // 기존 900에서 넓게 조정
+    minWidth: 1000, // 최소 넓이도 넓게 조정
     height: 700,
     alwaysOnTop: true,
     frame: false,
