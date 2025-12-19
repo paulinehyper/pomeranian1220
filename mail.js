@@ -56,7 +56,18 @@ function setupMailIpc(main) {
         console.log('[syncMail] INBOX opened');
         let searchCriteria = [];
         if (info.mailSince) {
-          searchCriteria = [["SINCE", new Date(info.mailSince)]];
+          // mailSince가 오늘이면 하루 전으로 보정
+          let sinceDate = new Date(info.mailSince);
+          const today = new Date();
+          if (
+            sinceDate.getFullYear() === today.getFullYear() &&
+            sinceDate.getMonth() === today.getMonth() &&
+            sinceDate.getDate() === today.getDate()
+          ) {
+            // 하루 전으로 보정
+            sinceDate.setDate(sinceDate.getDate() - 1);
+          }
+          searchCriteria = [["SINCE", sinceDate]];
         } else {
           searchCriteria = ["ALL"];
         }
