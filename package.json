@@ -30,10 +30,10 @@
     "electron-rebuild": "^3.2.9"
   },
   "dependencies": {
+    "@tensorflow/tfjs": "^4.20.0",
     "auto-launch": "^5.0.6",
     "better-sqlite3": "^12.5.0",
     "html-to-text": "^9.0.5",
-    "@tensorflow/tfjs": "^4.20.0",
     "imap-simple": "^5.1.0",
     "mailparser": "^3.9.1",
     "onnxruntime-node": "^1.23.2",

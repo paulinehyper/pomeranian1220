@@ -28,7 +28,9 @@
 </head>
 <body>
   <div class="modal-content">
-    <div class="emails-header">저장된 메일 목록</div>
+    <div class="emails-header">저장된 메일 목록
+      <button id="excludeAllBtn" style="float:right;margin-left:12px;padding:6px 16px;background:#e57373;color:#fff;border:none;border-radius:6px;cursor:pointer;">전체제외</button>
+    </div>
     <table class="emails-table" id="emailsTable">
       <thead>
         <tr>
@@ -177,6 +179,14 @@
         if (e.target === this) this.style.display = 'none';
       };
     }
+    // 전체제외 버튼 이벤트
+    document.getElementById('excludeAllBtn').onclick = async function() {
+      const emails = await window.electronAPI.getEmails();
+      const promises = emails.map(mail => window.electronAPI.setEmailTodoFlag(mail.id, 0));
+      await Promise.all(promises);
+      const updated = await window.electronAPI.getEmails();
+      renderEmails(updated);
+    };
     window.electronAPI.getEmails().then(renderEmails);
     // 1분마다 메일 목록 새로고침
     setInterval(async () => {
