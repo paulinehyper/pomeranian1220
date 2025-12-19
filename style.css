@@ -3,8 +3,16 @@
   color: #686868 !important;
 }
 /* 할일카드 및 제외버튼 텍스트 색상 통일 */
+/* 할일카드 텍스트 초록색 계열로 변경 */
 .todo-card,
-.todo-card span,
+.todo-card span {
+  color: #00b4a5 !important;
+}
+.todo-card.done,
+.todo-card.done span {
+  color: #686868 !important;
+  text-decoration-color: #686868 !important;
+}
 .remove-todo-btn {
   color: #686868 !important;
 }
