@@ -16,6 +16,13 @@ const dbPath = path.join(dbDir, 'todo.db');
 console.log('DB 경로:', dbPath);
 const db = new Database(dbPath);
 
+// mail_settings 테이블에 port 컬럼이 없으면 추가 (마이그레이션)
+const mailSettingsPragma = db.prepare("PRAGMA table_info(mail_settings)").all();
+const mailSettingsHasPort = mailSettingsPragma.some(col => col.name === 'port');
+if (!mailSettingsHasPort) {
+  db.exec('ALTER TABLE mail_settings ADD COLUMN port TEXT');
+}
+
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS todos (
@@ -45,14 +52,12 @@ CREATE TABLE IF NOT EXISTS emails (
 );
 
 CREATE TABLE IF NOT EXISTS mail_settings (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  mail_type TEXT,
+  id INTEGER PRIMARY KEY CHECK (id = 1),
   protocol TEXT,
   mail_id TEXT,
   mail_pw TEXT,
-  mail_since TEXT,
-  mail_server TEXT,
   host TEXT,
+  port TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

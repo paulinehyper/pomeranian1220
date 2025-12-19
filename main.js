@@ -352,9 +352,16 @@ ipcMain.handle('save-memo', (event, id, memo) => {
 });
 
 ipcMain.handle('save-mail-settings', (event, settings) => {
-  // Save mail_server and host as well
-  const stmt = db.prepare(`INSERT INTO mail_settings (mail_type, protocol, mail_id, mail_pw, mail_since, mail_server, host) VALUES (?, ?, ?, ?, ?, ?, ?)`);
-  stmt.run(settings.mailType, settings.protocol, settings.mailId, settings.mailPw, settings.mailSince, settings.mailServer, settings.host);
+  // mail_settings 테이블에 항상 1개만 저장 (id=1)
+  const stmt = db.prepare(`INSERT INTO mail_settings (id, protocol, mail_id, mail_pw, host, port) VALUES (1, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET protocol=excluded.protocol, mail_id=excluded.mail_id, mail_pw=excluded.mail_pw, host=excluded.host, port=excluded.port`);
+  stmt.run(
+    settings.protocol || '',
+    settings.mailId || '',
+    settings.mailPw || '',
+    settings.host || '',
+    settings.port || ''
+  );
   // 저장 후 바로 메일 연동 실행
   setTimeout(() => {
     if (typeof syncMail === 'function') syncMail();
@@ -363,8 +370,16 @@ ipcMain.handle('save-mail-settings', (event, settings) => {
 });
 
 ipcMain.handle('get-mail-settings', () => {
-  const row = db.prepare('SELECT * FROM mail_settings ORDER BY id DESC LIMIT 1').get();
-  return row || null;
+  const row = db.prepare('SELECT * FROM mail_settings WHERE id=1').get();
+  if (!row) return null;
+  // key 변환: mail_id → mailId, mail_pw → mailPw
+  return {
+    protocol: row.protocol,
+    port: row.port,
+    host: row.host,
+    mailId: row.mail_id,
+    mailPw: row.mail_pw
+  };
 });
 
 ipcMain.handle('set-email-todo-flag', (event, id, flag) => {

@@ -445,6 +445,7 @@
                 // 저장된 메일 연동정보를 불러와 input에 자동 채움
                 if (window.electronAPI && window.electronAPI.getMailSettings) {
                   window.electronAPI.getMailSettings().then(settings => {
+                    console.log('getMailSettings result:', settings);
                     if (settings) {
                       if (settings.host) document.getElementById('host').value = settings.host;
                       if (settings.mailId) document.getElementById('mailId').value = settings.mailId;
@@ -579,6 +580,24 @@
       if (idx === 1) {
         bindKeywordAddEvent();
         loadKeywordsToList();
+      }
+      if (idx === 3) {
+        // 환경설정 진입 시 getMailSettings로 input 자동 채움
+        if (window.electronAPI && window.electronAPI.getMailSettings) {
+          window.electronAPI.getMailSettings().then(settings => {
+            console.log('getMailSettings (afterContentChange):', settings);
+            if (settings) {
+              if (settings.host) document.getElementById('host').value = settings.host;
+              if (settings.mailId) document.getElementById('mailId').value = settings.mailId;
+              if (settings.mailPw) document.getElementById('mailPw').value = settings.mailPw;
+              if (settings.protocol) document.getElementById('protocolSecurity').value = settings.protocol;
+              if (settings.port && settings.protocol === 'custom') {
+                document.getElementById('customPort').value = settings.port;
+                document.getElementById('customPortDiv').style.display = 'flex';
+              }
+            }
+          });
+        }
       }
     }
     // sidebar 버튼 클릭 시 화면 전환 및 이벤트 연결
