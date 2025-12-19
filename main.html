@@ -138,6 +138,7 @@
           <h2 id=\"mainTitle\" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🏠 홈(Home) 화면</h2>
           <div style="width:100%;max-width:360px;margin:0 auto 12px auto;display:flex;gap:8px;">
             <input type="text" id="addTodoInput" placeholder="할일 입력" style="flex:1;padding:8px 12px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;" />
+            <input type="date" id="addTodoDeadline" style="padding:8px 12px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;" />
             <button id="addTodoBtn" style="background:#00b49a;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-weight:bold;cursor:pointer;transition:background 0.15s;">추가</button>
           </div>
           <ul id=\"todoCardList\" class=\"schedule-list\" style=\"padding:0;list-style:none;max-width:360px;margin:0 auto;\"></ul>
@@ -222,16 +223,22 @@
           setTimeout(() => {
             const addBtn = document.getElementById('addTodoBtn');
             const addInput = document.getElementById('addTodoInput');
-            if (addBtn && addInput && window.electronAPI && window.electronAPI.insertTodo) {
+            const addDeadline = document.getElementById('addTodoDeadline');
+            if (addBtn && addInput && addDeadline && window.electronAPI && window.electronAPI.insertTodo) {
               const addTodo = async () => {
                 const task = addInput.value.trim();
+                const deadline = addDeadline.value ? addDeadline.value : '';
                 if (!task) return;
-                await window.electronAPI.insertTodo({ task });
+                await window.electronAPI.insertTodo({ task, deadline });
                 addInput.value = '';
+                addDeadline.value = '';
                 renderMainContent(0);
               };
               addBtn.onclick = addTodo;
               addInput.onkeydown = (e) => {
+                if (e.key === 'Enter') addTodo();
+              };
+              addDeadline.onkeydown = (e) => {
                 if (e.key === 'Enter') addTodo();
               };
             }
@@ -240,12 +247,27 @@
             const cardList = document.getElementById('todoCardList');
             if (!cardList) return;
             if (res && res.length > 0) {
-              cardList.innerHTML = res.map((todo, i) => `
-                <li class='todo-card' style='position:relative;'>
-                  <span>${todo.task || '(제목 없음)'}</span>
-                  <button class="remove-todo-btn" data-id="${todo.id}" title="제외" style="position:absolute;top:10px;right:12px;background:#fff;border:1.5px solid #e0e0e0;color:#ff5a5a;border-radius:50%;width:26px;height:26px;font-size:1.1em;line-height:1;cursor:pointer;box-shadow:0 1px 4px #00b49a11;display:flex;align-items:center;justify-content:center;transition:background 0.15s,border 0.15s;">-</button>
-                </li>
-              `).join('');
+              cardList.innerHTML = res.map((todo, i) => {
+                let deadlineStr = '';
+                let ddayStr = '';
+                if (todo.deadline && todo.deadline !== '없음') {
+                  deadlineStr = todo.deadline;
+                  // D-day 계산
+                  const now = new Date();
+                  const deadlineDate = new Date(todo.deadline);
+                  if (!isNaN(deadlineDate)) {
+                    const diff = Math.ceil((deadlineDate - now) / (1000*60*60*24));
+                    ddayStr = diff >= 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
+                  }
+                }
+                return `
+                  <li class='todo-card' style='position:relative;'>
+                    <span style="color:#03af7c;font-weight:normal;margin-right:8px;">${deadlineStr}${ddayStr ? ' (' + ddayStr + ')' : ''}</span>
+                    <span>${todo.task || '(제목 없음)'}</span>
+                    <button class="remove-todo-btn" data-id="${todo.id}" title="제외" style="position:absolute;top:10px;right:12px;background:#fff;border:1.5px solid #e0e0e0;color:#ff5a5a;border-radius:50%;width:26px;height:26px;font-size:1.1em;line-height:1;cursor:pointer;box-shadow:0 1px 4px #00b49a11;display:flex;align-items:center;justify-content:center;transition:background 0.15s,border 0.15s;">-</button>
+                  </li>
+                `;
+              }).join('');
               // 할일 카드 클릭 시 취소선 토글
               cardList.querySelectorAll('.todo-card').forEach(card => {
                 card.addEventListener('click', function(e) {
