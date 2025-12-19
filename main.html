@@ -133,8 +133,28 @@
 
     function renderMainContent(idx) {
       let contentHtml = "";
-      if (idx === 0) {
-        contentHtml = `<h2 id=\"mainTitle\" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🏠 홈(Home) 화면</h2><p>이곳은 홈 화면입니다.</p>`;
+        if (idx === 0) {
+          contentHtml = `
+          <h2 id=\"mainTitle\" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🏠 홈(Home) 화면</h2>
+          <ul id=\"todoCardList\" class=\"schedule-list\" style=\"padding:0;list-style:none;max-width:360px;margin:0 auto;\"></ul>
+          <div style='color:#888;font-size:0.98em;margin-top:12px;'>오늘의 메일 기반 할일만 표시됩니다.</div>
+          <style>
+          .schedule-list li.todo-card {
+            background:#fff;
+            border-radius:10px;
+            box-shadow:0 2px 8px #00b49a11;
+            padding:16px 18px;
+            margin-bottom:12px;
+            font-size:1.08em;
+            color:#0093b4;
+            font-weight:bold;
+            transition:box-shadow 0.15s;
+          }
+          .schedule-list li.todo-card:hover {
+            box-shadow:0 4px 16px #00b49a22;
+          }
+          </style>
+          `;
       } else if (idx === 1) {
         contentHtml = `
         <h2 id=\"mainTitle\" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🔑 키워드 관리</h2>
@@ -181,6 +201,20 @@
         </form>`;
       }
       widgetMain.innerHTML = contentHtml;
+        // 홈화면 할일 카드(메일 제목만) 렌더링
+        if (idx === 0 && window.electronAPI && window.electronAPI.getTodos) {
+          window.electronAPI.getTodos().then(res => {
+            const cardList = document.getElementById('todoCardList');
+            if (!cardList) return;
+            if (res && res.length > 0) {
+              cardList.innerHTML = res.map(todo => `
+                <li class='todo-card'>${todo.task || '(제목 없음)'}</li>
+              `).join('');
+            } else {
+              cardList.innerHTML = `<li style='color:#bbb;text-align:center;padding:24px 0;'>등록된 할일이 없습니다.</li>`;
+            }
+          });
+        }
       if (idx === 2) {
         // 이메일 목록 불러오기
         if (window.electronAPI && window.electronAPI.getEmails) {
