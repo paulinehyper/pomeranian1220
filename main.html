@@ -182,7 +182,7 @@
         <div style=\"color:#888;font-size:0.98em;\">여기서 키워드를 관리할 수 있습니다.</div>
         `;
       } else if (idx === 2) {
-        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;display:flex;align-items:center;gap:10px;'>이메일 목록 <span id='emailCount' style='font-size:0.9em;color:#0093b4;'></span><button id='reloadEmailBtn' style='margin-left:8px;padding:4px 12px;font-size:0.95em;background:#eaf6ff;border:1px solid #b3d8f8;border-radius:6px;cursor:pointer;'>메일 불러오기</button></h2><div id='emailListLoading' style='color:#888;margin-bottom:12px;'>메일 목록을 불러오는 중...</div><ul id='emailList' style='padding:0;list-style:none;max-height:420px;overflow-y:auto;border:1px solid #e0e0e0;background:#f8fffd;'></ul>`;
+        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;display:flex;align-items:center;gap:10px;'>이메일 목록 <span id='emailCount' style='font-size:0.9em;color:#0093b4;'></span><button id='reloadEmailBtn' style='margin-left:8px;padding:4px 12px;font-size:0.95em;background:#eaf6ff;border:1px solid #b3d8f8;border-radius:6px;cursor:pointer;'>메일 불러오기</button></h2><div style='margin-bottom:10px;'><label for='emailSortSelect' style='font-size:0.98em;color:#0093b4;font-weight:bold;margin-right:8px;'>정렬:</label><select id='emailSortSelect' style='padding:4px 10px;border-radius:6px;border:1px solid #7be2c5;font-size:1em;'><option value='date'>수신날짜순</option><option value='from'>수신자순</option></select></div><div id='emailListLoading' style='color:#888;margin-bottom:12px;'>메일 목록을 불러오는 중...</div><ul id='emailList' style='padding:0;list-style:none;max-height:420px;overflow-y:auto;border:1px solid #e0e0e0;background:#f8fffd;'></ul>`;
       } else if (idx === 3) {
         contentHtml = `
         <h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>환경설정</h2>
@@ -290,6 +290,8 @@
                   }
                   const li = this.closest('li');
                   if (li) li.remove();
+                  // 이메일 목록도 즉시 새로고침
+                  renderMainContent(2);
                 });
               });
             } else {
@@ -376,71 +378,96 @@
         // 이메일 목록 불러오기
         if (window.electronAPI && window.electronAPI.getEmails) {
           window.electronAPI.getEmails().then(emails => {
+            let currentSort = 'date';
             const emailList = document.getElementById('emailList');
             const loading = document.getElementById('emailListLoading');
             const emailCount = document.getElementById('emailCount');
-            if (loading) loading.style.display = 'none';
-            if (emailCount) emailCount.textContent = `(${emails.length})`;
-            if (emailList) {
-              if (emails && emails.length > 0) {
-                emailList.innerHTML = emails.map((mail, idx) => `
-                  <li class='email-item' data-idx='${idx}' style='margin-bottom:14px;padding:12px 16px;background:#fff;border-radius:8px;box-shadow:0 2px 8px #00b49a11;position:relative;'>
-                    ${mail.todo_flag === 1 ? `<div style='position:absolute;top:8px;left:8px;background:#e7fffe;color:#00b49a;font-size:0.92em;padding:2px 10px;border-radius:6px;font-weight:bold;box-shadow:0 1px 4px #00b49a11;'>할일</div>` : ''}
-                    <div style='font-weight:bold;color:#0093b4;'>${mail.subject}</div>
-                    <div style='color:#444;font-size:0.98em;margin-top:4px;'>${mail.body ? mail.body.substring(0, 80) + (mail.body.length > 80 ? '...' : '') : ''}</div>
-                    <div style='color:#888;font-size:0.92em;margin-top:4px;'>${mail.received_at} / ${mail.from_addr}</div>
-                    ${mail.todo_flag === 1
-                      ? `<button class='remove-todo-btn' data-idx='${idx}' style='position:absolute;top:12px;right:16px;background:#ffeaea;color:#ff5a5a;border:1.5px solid #ffbaba;padding:4px 12px;border-radius:6px;font-size:0.95em;cursor:pointer;'>할일 제외</button>`
-                      : `<button class='add-todo-btn' data-idx='${idx}' style='position:absolute;top:12px;right:16px;background:#00b49a;color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:0.95em;cursor:pointer;'>할일로 추가</button>`}
-                  </li>
-                `).join('');
-                // 상세 팝업 이벤트 연결
-                document.querySelectorAll('.email-item').forEach(item => {
-                  const addBtn = item.querySelector('.add-todo-btn');
-                  const removeBtn = item.querySelector('.remove-todo-btn');
-                  if (addBtn) {
-                    addBtn.onclick = function(e) {
-                      e.stopPropagation();
-                      const mail = emails[parseInt(this.dataset.idx)];
-                      if (window.electronAPI && window.electronAPI.addTodoFromMail) {
-                        window.electronAPI.addTodoFromMail(mail.id).then(() => {
-                          renderMainContent(2);
-                          renderMainContent(0);
-                        });
-                      }
-                    };
-                  }
-                  if (removeBtn) {
-                    removeBtn.onclick = function(e) {
-                      e.stopPropagation();
-                      const mail = emails[parseInt(this.dataset.idx)];
-                      if (window.electronAPI && window.electronAPI.excludeTodo) {
-                        window.electronAPI.excludeTodo(mail.id).then(() => {
-                          renderMainContent(2);
-                          renderMainContent(0);
-                        });
-                      }
-                    };
-                  }
-                  item.onclick = function(e) {
-                    if (e.target.classList.contains('add-todo-btn') || e.target.classList.contains('remove-todo-btn')) return;
-                    const mail = emails[parseInt(this.dataset.idx)];
-                    const params = new URLSearchParams({
-                      subject: mail.subject,
-                      received_at: mail.received_at,
-                      from_addr: mail.from_addr,
-                      body: mail.body || ''
-                    });
-                    if (window.electronAPI && window.electronAPI.openMailDetail) {
-                      window.electronAPI.openMailDetail(params.toString());
-                    } else {
-                      window.open('mail-detail.html?' + params.toString(), '_blank', 'width=700,height=600');
+            const sortSelect = document.getElementById('emailSortSelect');
+            function renderEmailList(sortedEmails) {
+              if (loading) loading.style.display = 'none';
+              if (emailCount) emailCount.textContent = `(${sortedEmails.length})`;
+              if (emailList) {
+                if (sortedEmails && sortedEmails.length > 0) {
+                  emailList.innerHTML = sortedEmails.map((mail, idx) => `
+                    <li class='email-item' data-idx='${idx}' style='margin-bottom:14px;padding:12px 16px;background:#fff;border-radius:8px;box-shadow:0 2px 8px #00b49a11;position:relative;'>
+                      ${mail.todo_flag === 1 ? `<div style='position:absolute;top:8px;left:8px;background:#e7fffe;color:#00b49a;font-size:0.92em;padding:2px 10px;border-radius:6px;font-weight:bold;box-shadow:0 1px 4px #00b49a11;'>할일</div>` : ''}
+                      <div style='font-weight:bold;color:#0093b4;'>${mail.subject}</div>
+                      <div style='color:#444;font-size:0.98em;margin-top:4px;'>${mail.body ? mail.body.substring(0, 80) + (mail.body.length > 80 ? '...' : '') : ''}</div>
+                      <div style='color:#888;font-size:0.92em;margin-top:4px;'>${mail.received_at} / ${mail.from_addr}</div>
+                      ${mail.todo_flag === 1
+                        ? `<button class='remove-todo-btn' data-idx='${idx}' style='position:absolute;top:12px;right:16px;background:#ffeaea;color:#ff5a5a;border:1.5px solid #ffbaba;padding:4px 12px;border-radius:6px;font-size:0.95em;cursor:pointer;'>할일 제외</button>`
+                        : `<button class='add-todo-btn' data-idx='${idx}' style='position:absolute;top:12px;right:16px;background:#00b49a;color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:0.95em;cursor:pointer;'>할일로 추가</button>`}
+                    </li>
+                  `).join('');
+                  // 상세 팝업 이벤트 연결
+                  document.querySelectorAll('.email-item').forEach(item => {
+                    const addBtn = item.querySelector('.add-todo-btn');
+                    const removeBtn = item.querySelector('.remove-todo-btn');
+                    if (addBtn) {
+                      addBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        const mail = sortedEmails[parseInt(this.dataset.idx)];
+                        if (window.electronAPI && window.electronAPI.addTodoFromMail) {
+                          window.electronAPI.addTodoFromMail(mail.id).then(() => {
+                            renderMainContent(2);
+                            renderMainContent(0);
+                          });
+                        }
+                      };
                     }
-                  };
-                });
-              } else {
-                emailList.innerHTML = `<li style='color:#888;padding:12px;'>불러온 메일이 없습니다.</li>`;
+                    if (removeBtn) {
+                      removeBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        const mail = sortedEmails[parseInt(this.dataset.idx)];
+                        if (window.electronAPI && window.electronAPI.excludeTodo) {
+                          window.electronAPI.excludeTodo(mail.id).then(() => {
+                            // emails 테이블 todo_flag=0, 그리고 unique_hash로 todos 테이블도 todo_flag=0
+                            if (window.electronAPI && window.electronAPI.setEmailTodoFlag) {
+                              window.electronAPI.setEmailTodoFlag(mail.id, 0);
+                            }
+                            renderMainContent(2);
+                            renderMainContent(0);
+                          });
+                        }
+                      };
+                    }
+                    item.onclick = function(e) {
+                      if (e.target.classList.contains('add-todo-btn') || e.target.classList.contains('remove-todo-btn')) return;
+                      const mail = sortedEmails[parseInt(this.dataset.idx)];
+                      const params = new URLSearchParams({
+                        subject: mail.subject,
+                        received_at: mail.received_at,
+                        from_addr: mail.from_addr,
+                        body: mail.body || ''
+                      });
+                      if (window.electronAPI && window.electronAPI.openMailDetail) {
+                        window.electronAPI.openMailDetail(params.toString());
+                      } else {
+                        window.open('mail-detail.html?' + params.toString(), '_blank', 'width=700,height=600');
+                      }
+                    };
+                  });
+                } else {
+                  emailList.innerHTML = `<li style='color:#888;padding:12px;'>불러온 메일이 없습니다.</li>`;
+                }
               }
+            }
+            function sortEmails(emails, sortKey) {
+              if (sortKey === 'date') {
+                return [...emails].sort((a, b) => new Date(b.received_at) - new Date(a.received_at));
+              } else if (sortKey === 'from') {
+                return [...emails].sort((a, b) => (a.from_addr || '').localeCompare(b.from_addr || ''));
+              }
+              return emails;
+            }
+            // 최초 렌더링
+            renderEmailList(sortEmails(emails, currentSort));
+            // 정렬 변경 이벤트
+            if (sortSelect) {
+              sortSelect.onchange = function() {
+                currentSort = sortSelect.value;
+                renderEmailList(sortEmails(emails, currentSort));
+              };
             }
           });
         }
