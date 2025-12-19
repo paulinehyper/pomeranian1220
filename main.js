@@ -7,21 +7,22 @@ const { addTodosFromEmailTodos } = require('./email_todo_flag');
 // 이메일 id를 받아 해당 메일을 todo로 분류하는 IPC
 ipcMain.handle('add-todo-from-mail', (event, mailId) => {
   try {
-    // 1. 해당 메일 todo_flag=1로 변경
-    db.prepare('UPDATE emails SET todo_flag=1 WHERE id=?').run(mailId);
-    // 2. 해당 메일을 todos에 추가 (중복 방지)
-    const mail = db.prepare('SELECT subject, body, deadline, unique_hash FROM emails WHERE id=?').get(mailId);
+    // 1. 해당 메일 unique_hash가 없으면 새로 생성
+    let mail = db.prepare('SELECT * FROM emails WHERE id=?').get(mailId);
     if (!mail) return { success: false, error: '메일을 찾을 수 없음' };
-    // unique_hash가 없으면 메일 기반 아님(추가 안함)
-    if (!mail.unique_hash) return { success: false, error: '메일 기반이 아님' };
-    const exists = db.prepare('SELECT COUNT(*) as cnt FROM todos WHERE task = ? AND todo_flag = 1').get(mail.subject).cnt;
+    if (!mail.unique_hash) {
+      const crypto = require('crypto');
+      mail.unique_hash = crypto.createHash('sha256').update((mail.subject||'')+(mail.body||'')+(mail.received_at||'')).digest('hex');
+      db.prepare('UPDATE emails SET unique_hash=? WHERE id=?').run(mail.unique_hash, mailId);
+    }
+    db.prepare('UPDATE emails SET todo_flag=1 WHERE id=?').run(mailId);
+    const exists = db.prepare('SELECT COUNT(*) as cnt FROM todos WHERE unique_hash = ? AND todo_flag = 1').get(mail.unique_hash).cnt;
     if (exists === 0) {
       const now = new Date();
-      // YYYY-MM-DD HH:mm:ss 포맷
       const pad = n => n.toString().padStart(2, '0');
       const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-      db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag, unique_hash, mail_flag) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-        .run(dateStr, '', mail.subject, mail.body || '', mail.deadline || '', 1, mail.unique_hash, 'Y');
+      db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag, unique_hash, mail_flag) VALUES (?, ?, ?, ?, ?, 1, ?, ?)')
+        .run(dateStr, '', mail.subject, mail.body || '', mail.deadline || '', mail.unique_hash, 'Y');
     }
     return { success: true };
   } catch (e) {
@@ -257,8 +258,8 @@ ipcMain.handle('insert-todo', (event, { task, deadline, memo }) => {
         dday = diff >= 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
       }
     }
-    db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag) VALUES (?, ?, ?, ?, ?, 1)')
-      .run(dateStr, dday, task, memo || '', deadline || '');
+    db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag, unique_hash) VALUES (?, ?, ?, ?, ?, 1, ?)')
+      .run(dateStr, dday, task, memo || '', deadline || '', null);
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
