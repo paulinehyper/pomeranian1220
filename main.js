@@ -353,14 +353,15 @@ ipcMain.handle('save-memo', (event, id, memo) => {
 
 ipcMain.handle('save-mail-settings', (event, settings) => {
   // mail_settings 테이블에 항상 1개만 저장 (id=1)
-  const stmt = db.prepare(`INSERT INTO mail_settings (id, protocol, mail_id, mail_pw, host, port) VALUES (1, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET protocol=excluded.protocol, mail_id=excluded.mail_id, mail_pw=excluded.mail_pw, host=excluded.host, port=excluded.port`);
+  const stmt = db.prepare(`INSERT INTO mail_settings (id, protocol, mail_id, mail_pw, host, port, mail_since) VALUES (1, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET protocol=excluded.protocol, mail_id=excluded.mail_id, mail_pw=excluded.mail_pw, host=excluded.host, port=excluded.port, mail_since=excluded.mail_since`);
   stmt.run(
     settings.protocol || '',
     settings.mailId || '',
     settings.mailPw || '',
     settings.host || '',
-    settings.port || ''
+    settings.port || '',
+    settings.mailSince || ''
   );
   // 저장 후 바로 메일 연동 실행
   setTimeout(() => {
@@ -372,13 +373,14 @@ ipcMain.handle('save-mail-settings', (event, settings) => {
 ipcMain.handle('get-mail-settings', () => {
   const row = db.prepare('SELECT * FROM mail_settings WHERE id=1').get();
   if (!row) return null;
-  // key 변환: mail_id → mailId, mail_pw → mailPw
+  // key 변환: mail_id → mailId, mail_pw → mailPw, mail_since → mailSince
   return {
     protocol: row.protocol,
     port: row.port,
     host: row.host,
     mailId: row.mail_id,
-    mailPw: row.mail_pw
+    mailPw: row.mail_pw,
+    mailSince: row.mail_since
   };
 });
 
@@ -608,11 +610,16 @@ app.whenReady().then(() => {
   // const { BrowserWindow } = require('electron');
   let syncMailInterval = null;
   const syncMail = async () => {
-    const row = db.prepare('SELECT * FROM mail_settings ORDER BY id DESC LIMIT 1').get();
-    if (row && row.mail_id && row.mail_pw && row.protocol && row.mail_type) {
+    const row = db.prepare('SELECT * FROM mail_settings WHERE id=1').get();
+    if (row && row.mail_id && row.mail_pw && row.protocol) {
+      // mail_type이 없으면 기본값 'imap' 사용
+      if (!row.mail_type) row.mail_type = 'imap';
       const mailModule = require('./mail');
       if (typeof mailModule.syncMail === 'function') {
         await mailModule.syncMail({ ...row, mail_server: row.mail_server });
+        // 메일 연동 후 renderer에 동기화 완료 신호
+        const win = BrowserWindow.getAllWindows()[0];
+        if (win) win.webContents.send('mail-sync-complete');
       } else {
         const win = BrowserWindow.getAllWindows()[0];
         if (win) {

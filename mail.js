@@ -2,34 +2,34 @@ const { ipcMain } = require('electron');
 const Imap = require('imap-simple');
 const db = require('./db');
 
-function getImapConfig({ mailType, protocol, mailId, mailPw, mail_server, mailServer, host }) {
+function getImapConfig(info) {
   let resolvedHost = '';
   let port, tls;
-  if (host && host.trim()) {
-    resolvedHost = host.trim();
-  } else if (mail_server && mail_server.trim()) {
-    resolvedHost = mail_server.trim();
-  } else if (mailServer && mailServer.trim()) {
-    resolvedHost = mailServer.trim();
+  if (info.host && info.host.trim()) {
+    resolvedHost = info.host.trim();
+  } else if (info.mail_server && info.mail_server.trim()) {
+    resolvedHost = info.mail_server.trim();
+  } else if (info.mailServer && info.mailServer.trim()) {
+    resolvedHost = info.mailServer.trim();
   } else {
     resolvedHost = '';
   }
   if (!resolvedHost) {
     throw new Error('IMAP 서버 주소(host)를 입력해야 합니다.');
   }
-  if (protocol === 'imap-ssl') {
+  if (info.protocol === 'imap-ssl' || info.protocol === 'imap-secure') {
     port = 993; tls = true;
-  } else if (protocol === 'imap') {
+  } else if (info.protocol === 'imap') {
     port = 143; tls = false;
-  } else if (protocol === 'pop3-ssl') {
+  } else if (info.protocol === 'pop3-ssl' || info.protocol === 'pop3-secure') {
     port = 995; tls = true;
-  } else if (protocol === 'pop3') {
+  } else if (info.protocol === 'pop3') {
     port = 110; tls = false;
   }
   return {
     imap: {
-      user: mailId,
-      password: mailPw,
+      user: info.mailId || info.mail_id,
+      password: info.mailPw || info.mail_pw,
       host: resolvedHost,
       port,
       tls,
@@ -42,22 +42,28 @@ function getImapConfig({ mailType, protocol, mailId, mailPw, mail_server, mailSe
 function setupMailIpc(main) {
   // 내부에서 직접 호출 가능한 syncMail 함수 export
   async function syncMail(info) {
+    console.log('[syncMail] called with info:', info);
     if (info.protocol.startsWith('imap')) {
       const config = getImapConfig(info);
+      console.log('[syncMail] IMAP config:', config);
       try {
         const conn = await Imap.connect(config);
+        console.log('[syncMail] IMAP connected');
         const box = await conn.openBox('INBOX');
+        console.log('[syncMail] INBOX opened');
         let searchCriteria = [];
         if (info.mailSince) {
           searchCriteria = [["SINCE", new Date(info.mailSince)]];
         } else {
           searchCriteria = ["ALL"];
         }
+        console.log('[syncMail] searchCriteria:', searchCriteria);
         const fetchOptions = {
           bodies: ["HEADER", "TEXT"],
           struct: true
         };
         const messages = await conn.search(searchCriteria, fetchOptions);
+        console.log(`[syncMail] messages found: ${messages.length}`);
         const { simpleParser } = require('mailparser');
         const crypto = require('crypto');
         const insert = db.prepare('INSERT INTO emails (received_at, subject, body, from_addr, todo_flag, unique_hash, deadline) VALUES (?, ?, ?, ?, ?, ?, ?)');

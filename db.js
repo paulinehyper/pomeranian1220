@@ -22,6 +22,10 @@ const mailSettingsHasPort = mailSettingsPragma.some(col => col.name === 'port');
 if (!mailSettingsHasPort) {
   db.exec('ALTER TABLE mail_settings ADD COLUMN port TEXT');
 }
+const mailSettingsHasSince = mailSettingsPragma.some(col => col.name === 'mail_since');
+if (!mailSettingsHasSince) {
+  db.exec('ALTER TABLE mail_settings ADD COLUMN mail_since TEXT');
+}
 
 
 db.exec(`

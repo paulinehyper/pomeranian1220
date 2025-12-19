@@ -213,6 +213,10 @@
             <label for='mailPw' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>비밀번호</label>
             <input id='mailPw' type='password' placeholder='비밀번호' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
           </div>
+          <div style='display:flex;flex-direction:column;gap:8px;'>
+            <label for='mailSince' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>수신받은날짜</label>
+            <input id='mailSince' type='date' placeholder='yyyy-mm-dd' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
+          </div>
           <button type='submit' style='margin-top:10px;background:#00b49a;color:#fff;border:none;padding:10px 36px;border-radius:8px;font-weight:bold;font-size:1.1em;cursor:pointer;box-shadow:0 2px 8px #00b49a22;'>저장</button>
         </form>`;
       }
@@ -451,6 +455,7 @@
                       if (settings.mailId) document.getElementById('mailId').value = settings.mailId;
                       if (settings.mailPw) document.getElementById('mailPw').value = settings.mailPw;
                       if (settings.protocol) document.getElementById('protocolSecurity').value = settings.protocol;
+                      if (settings.mailSince) document.getElementById('mailSince').value = settings.mailSince;
                       // custom port 처리
                       if (settings.port && settings.protocol === 'custom') {
                         document.getElementById('customPort').value = settings.port;
@@ -474,7 +479,8 @@
             port,
             mailId: document.getElementById('mailId').value,
             mailPw: document.getElementById('mailPw').value,
-            host: document.getElementById('host').value
+            host: document.getElementById('host').value,
+            mailSince: document.getElementById('mailSince').value
           };
           if (window.electronAPI && window.electronAPI.saveMailSettings) {
             await window.electronAPI.saveMailSettings(settings);
