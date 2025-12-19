@@ -81,44 +81,25 @@ db.deleteKeyword = function(kw) {
   return db.prepare('DELETE FROM keyword WHERE keyword = ?').run(kw);
 };
 
-// todos 테이블에 할일을 저장하는 함수 (deadline 컬럼 포함)
-// 사용 예: db.insertTodo({ date: '2025-12-13', dday: 'D-1', task: '할일', memo: '메모', deadline: '2025-12-13' })
-db.insertTodo = function({ date, dday, task, memo, deadline }) {
-  return db.prepare('INSERT INTO todos (date, dday, task, memo, deadline) VALUES (?, ?, ?, ?, ?)').run(date, dday, task, memo || '', deadline || '');
+// todos 테이블에 할일을 저장하는 함수 (deadline, mail_flag 컬럼 포함)
+// 사용 예: db.insertTodo({ date: '2025-12-13', dday: 'D-1', task: '할일', memo: '메모', deadline: '2025-12-13', mail_flag: 'Y' })
+db.insertTodo = function({ date, dday, task, memo, deadline, mail_flag }) {
+  return db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, mail_flag) VALUES (?, ?, ?, ?, ?, ?)').run(date, dday, task, memo || '', deadline || '', mail_flag || null);
 };
 
-
-
-// Migration: add deadline column to todos if missing
+// Migration: add columns to todos if missing (중복 없이 한 번만)
 const todosPragma = db.prepare("PRAGMA table_info(todos)").all();
 const todosHasDeadline = todosPragma.some(col => col.name === 'deadline');
 if (!todosHasDeadline) {
   db.exec('ALTER TABLE todos ADD COLUMN deadline TEXT');
 }
-// Migration: add todo_flag column to todos if missing
 const todosHasTodoFlag = todosPragma.some(col => col.name === 'todo_flag');
 if (!todosHasTodoFlag) {
   db.exec('ALTER TABLE todos ADD COLUMN todo_flag INTEGER DEFAULT 1');
 }
-
-// Migration: add deadline column to emails if missing
-const emailsPragma = db.prepare("PRAGMA table_info(emails)").all();
-const emailsHasDeadline = emailsPragma.some(col => col.name === 'deadline');
-if (!emailsHasDeadline) {
-  db.exec('ALTER TABLE emails ADD COLUMN deadline TEXT');
-}
-
-// Migration: add unique_hash column to emails if missing
-const emailsHasUniqueHash = emailsPragma.some(col => col.name === 'unique_hash');
-if (!emailsHasUniqueHash) {
-  db.exec('ALTER TABLE emails ADD COLUMN unique_hash TEXT');
-}
-
-// Migration: add host column to mail_settings if missing
-const mailSettingsPragma = db.prepare("PRAGMA table_info(mail_settings)").all();
-const mailSettingsHasHost = mailSettingsPragma.some(col => col.name === 'host');
-if (!mailSettingsHasHost) {
-  db.exec('ALTER TABLE mail_settings ADD COLUMN host TEXT');
+const todosHasMailFlag = todosPragma.some(col => col.name === 'mail_flag');
+if (!todosHasMailFlag) {
+  db.exec("ALTER TABLE todos ADD COLUMN mail_flag TEXT");
 }
 
 module.exports = db;

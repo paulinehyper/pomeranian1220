@@ -17,9 +17,11 @@ ipcMain.handle('add-todo-from-mail', (event, mailId) => {
     const exists = db.prepare('SELECT COUNT(*) as cnt FROM todos WHERE task = ? AND todo_flag = 1').get(mail.subject).cnt;
     if (exists === 0) {
       const now = new Date();
-      const today = now.toISOString().slice(0, 10);
-      db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag, unique_hash) VALUES (?, ?, ?, ?, ?, 1, ?)')
-        .run(today, '', mail.subject, mail.body || '', mail.deadline || '', mail.unique_hash);
+      // YYYY-MM-DD HH:mm:ss 포맷
+      const pad = n => n.toString().padStart(2, '0');
+      const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag, unique_hash, mail_flag) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(dateStr, '', mail.subject, mail.body || '', mail.deadline || '', 1, mail.unique_hash, 'Y');
     }
     return { success: true };
   } catch (e) {
@@ -71,17 +73,10 @@ ipcMain.on('open-mail-detail', (event, params) => {
 
 // get-todos, get-emails 핸들러는 앱 시작 시 한 번만 등록
 ipcMain.handle('get-todos', () => {
-  // todo_flag=1(할일) 중 메일 기반(unique_hash 존재) + 키워드 포함된 subject만 반환
+  // todo_flag=1(할일) 전체 반환
   const todos = db.prepare('SELECT * FROM todos WHERE todo_flag=1 ORDER BY id').all();
-  const keywords = db.getAllKeywords ? db.getAllKeywords() : [];
   const now = new Date();
-  // 메일 기반(unique_hash) + 키워드 포함 subject만 필터링
-  const filtered = todos.filter(todo => {
-    if (!todo.unique_hash) return false;
-    if (!keywords.length) return false;
-    return keywords.some(kw => todo.task && todo.task.includes(kw));
-  });
-  return filtered.map(todo => {
+  return todos.map(todo => {
     let deadline = todo.deadline;
     let dday = '없음';
     let date = '없음';
