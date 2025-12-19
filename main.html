@@ -137,7 +137,6 @@
           contentHtml = `
           <h2 id=\"mainTitle\" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🏠 홈(Home) 화면</h2>
           <ul id=\"todoCardList\" class=\"schedule-list\" style=\"padding:0;list-style:none;max-width:360px;margin:0 auto;\"></ul>
-          <div style='color:#888;font-size:0.98em;margin-top:12px;'>오늘의 메일 기반 할일만 표시됩니다.</div>
           <style>
           .schedule-list li.todo-card {
             background:#fff;
@@ -167,7 +166,7 @@
           `;
       } else if (idx === 1) {
         contentHtml = `
-        <h2 id=\"mainTitle\" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🔑 키워드 관리</h2>
+        <h2 id=\"mainTitle\" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>키워드 관리</h2>
         <div class=\"keyword-input-row\" style=\"width:100%;max-width:360px;display:flex;gap:8px;margin-bottom:12px;\">
           <input type=\"text\" id=\"keywordInput\" class=\"keyword-input\" placeholder=\"키워드 입력\" style=\"flex:1;padding:6px 8px;border-radius:6px;border:1px solid #7be2c5;\" />
           <button id=\"addKeywordBtn\" class=\"keyword-add-btn\" style=\"background:#e7fffe;color:#00b48a;border:none;padding:6px 18px;border-radius:6px;font-weight:bold;cursor:pointer;transition:background 0.15s;\">추가</button>
@@ -176,10 +175,10 @@
         <div style=\"color:#888;font-size:0.98em;\">여기서 키워드를 관리할 수 있습니다.</div>
         `;
       } else if (idx === 2) {
-        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>📧 이메일 목록 <span id='emailCount' style='font-size:0.9em;color:#0093b4;'></span></h2><div id='emailListLoading' style='color:#888;margin-bottom:12px;'>메일 목록을 불러오는 중...</div><ul id='emailList' style='padding:0;list-style:none;max-height:420px;overflow-y:auto;border:1px solid #e0e0e0;background:#f8fffd;'></ul>`;
+        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>이메일 목록 <span id='emailCount' style='font-size:0.9em;color:#0093b4;'></span></h2><div id='emailListLoading' style='color:#888;margin-bottom:12px;'>메일 목록을 불러오는 중...</div><ul id='emailList' style='padding:0;list-style:none;max-height:420px;overflow-y:auto;border:1px solid #e0e0e0;background:#f8fffd;'></ul>`;
       } else if (idx === 3) {
         contentHtml = `
-        <h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>⚙️ 환경설정</h2>
+        <h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>환경설정</h2>
         <form id='mailSettingsForm' style='display:flex;flex-direction:column;gap:18px;align-items:stretch;margin-top:18px;max-width:340px;margin-left:auto;margin-right:auto;'>
           <div style='display:flex;flex-direction:column;gap:8px;'>
             <label style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>방식/보안</label>
@@ -220,7 +219,7 @@
               cardList.innerHTML = res.map((todo, i) => `
                 <li class='todo-card' style='position:relative;'>
                   <span>${todo.task || '(제목 없음)'}</span>
-                  <button class="remove-todo-btn" data-idx="${i}" title="제외" style="position:absolute;top:10px;right:12px;background:#fff;border:1.5px solid #e0e0e0;color:#ff5a5a;border-radius:50%;width:26px;height:26px;font-size:1.1em;line-height:1;cursor:pointer;box-shadow:0 1px 4px #00b49a11;display:flex;align-items:center;justify-content:center;transition:background 0.15s,border 0.15s;">-</button>
+                  <button class="remove-todo-btn" data-id="${todo.id}" title="제외" style="position:absolute;top:10px;right:12px;background:#fff;border:1.5px solid #e0e0e0;color:#ff5a5a;border-radius:50%;width:26px;height:26px;font-size:1.1em;line-height:1;cursor:pointer;box-shadow:0 1px 4px #00b49a11;display:flex;align-items:center;justify-content:center;transition:background 0.15s,border 0.15s;">-</button>
                 </li>
               `).join('');
               // 할일 카드 클릭 시 취소선 토글
@@ -235,8 +234,10 @@
               cardList.querySelectorAll('.remove-todo-btn').forEach(btn => {
                 btn.addEventListener('click', function(e) {
                   e.stopPropagation();
-                  const idx = parseInt(this.dataset.idx);
-                  // 실제 삭제 로직은 필요시 추가, 현재는 UI에서만 제거
+                  const id = this.dataset.id;
+                  if (window.electronAPI && window.electronAPI.excludeTodo) {
+                    window.electronAPI.excludeTodo(Number(id));
+                  }
                   const li = this.closest('li');
                   if (li) li.remove();
                 });

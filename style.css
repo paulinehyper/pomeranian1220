@@ -1,3 +1,13 @@
+/* 키워드 관리 키워드 색상 통일 */
+.keyword-item {
+  color: #686868 !important;
+}
+/* 할일카드 및 제외버튼 텍스트 색상 통일 */
+.todo-card,
+.todo-card span,
+.remove-todo-btn {
+  color: #686868 !important;
+}
 /* 이메일 연동설정창 드래그 이동 가능 영역 */
 .settings-drag-title {
   -webkit-app-region: drag;
