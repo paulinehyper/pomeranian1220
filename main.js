@@ -30,10 +30,17 @@ ipcMain.on('open-mail-detail', (event, params) => {
 
 // get-todos, get-emails 핸들러는 앱 시작 시 한 번만 등록
 ipcMain.handle('get-todos', () => {
-  // todo_flag=1(할일)만 조회
+  // todo_flag=1(할일) 중 메일 기반(unique_hash 존재) + 키워드 포함된 subject만 반환
   const todos = db.prepare('SELECT * FROM todos WHERE todo_flag=1 ORDER BY id').all();
+  const keywords = db.getAllKeywords ? db.getAllKeywords() : [];
   const now = new Date();
-  return todos.map(todo => {
+  // 메일 기반(unique_hash) + 키워드 포함 subject만 필터링
+  const filtered = todos.filter(todo => {
+    if (!todo.unique_hash) return false;
+    if (!keywords.length) return false;
+    return keywords.some(kw => todo.task && todo.task.includes(kw));
+  });
+  return filtered.map(todo => {
     let deadline = todo.deadline;
     let dday = '없음';
     let date = '없음';
