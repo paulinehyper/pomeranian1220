@@ -242,24 +242,32 @@ ipcMain.handle('exclude-todo', (event, id) => {
     // todos에서 unique_hash가 있으면 메일 기반임
     const todo = db.prepare('SELECT * FROM todos WHERE id=?').get(id);
     let negativeSample = '';
+    let mail = null;
     if (todo && todo.unique_hash) {
-      // emails에서 subject/body 찾기
-      const mail = db.prepare('SELECT subject, body, id FROM emails WHERE unique_hash=?').get(todo.unique_hash);
+      // emails에서 subject/body 찾기 (unique_hash 우선)
+      mail = db.prepare('SELECT subject, body, id FROM emails WHERE unique_hash=?').get(todo.unique_hash);
       // 메일 기반 할일이면 emails 테이블의 todo_flag도 0으로 변경
       if (mail && mail.id) {
         db.prepare('UPDATE emails SET todo_flag=0 WHERE id=?').run(mail.id);
       }
-      if (mail) {
-        const fs = require('fs');
-        const lines = fs.readFileSync('todo_train_data.txt', 'utf-8').split('\n');
-        const filtered = lines.filter(line => {
-          // subject 또는 body가 포함된 줄은 제외
-          return !(line.includes(mail.subject) || line.includes(mail.body));
-        });
-        fs.writeFileSync('todo_train_data.txt', filtered.join('\n'));
-        // negative 샘플로 저장 (예: __NEG__ [제목] [본문])
-        negativeSample = `__NEG__ ${mail.subject} ${mail.body || ''}`.trim();
+    }
+    // unique_hash가 없거나 일치하는 메일이 없으면 subject/body로 emails.todo_flag=0 처리
+    if ((!mail || !mail.id) && todo) {
+      const candidates = db.prepare('SELECT id FROM emails WHERE subject=? AND (body=? OR ? IS NULL OR body IS NULL)').all(todo.task, todo.memo, todo.memo);
+      for (const cand of candidates) {
+        db.prepare('UPDATE emails SET todo_flag=0 WHERE id=?').run(cand.id);
       }
+    }
+    // negative 샘플 저장 및 학습데이터에서 제거
+    if (mail) {
+      const fs = require('fs');
+      const lines = fs.readFileSync('todo_train_data.txt', 'utf-8').split('\n');
+      const filtered = lines.filter(line => {
+        // subject 또는 body가 포함된 줄은 제외
+        return !(line.includes(mail.subject) || line.includes(mail.body));
+      });
+      fs.writeFileSync('todo_train_data.txt', filtered.join('\n'));
+      negativeSample = `__NEG__ ${mail.subject} ${mail.body || ''}`.trim();
     } else if (todo) {
       // 일반 할일도 negative 샘플로 저장
       negativeSample = `__NEG__ ${todo.task} ${todo.memo || ''}`.trim();
