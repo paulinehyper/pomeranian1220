@@ -587,14 +587,27 @@ app.whenReady().then(() => {
         /(\d{1,2})월\s?(\d{1,2})일.*제출/, /(\d{1,2})일까지.*제출/, /(\d{1,2})일.*제출/, /by\s+(\d{1,2})[./-](\d{1,2})/i, /submit.*by.*(\d{1,2})[./-](\d{1,2})/i
       ];
       const adKeywords = ['instagram', 'facebook', '온라인투어', 'onlinetour', '페이스북', '인스타그램'];
+      const newsAdKeywords = ['instagram', 'facebook', '온라인투어', 'onlinetour', '페이스북', '인스타그램', '뉴스데일리', 'newsdaily', '광고', '이벤트', 'promotion', 'newsletter', 'unwanted', '광고성', '마케팅'];
       const emails = db.prepare('SELECT * FROM emails WHERE todo_flag IS NULL').all();
       for (const mail of emails) {
         const text = ((mail.subject || '') + ' ' + (mail.body || '')).toLowerCase();
         const from = (mail.from_addr || '').toLowerCase();
-        // 광고성 메일 제외
-        const isAdMail = adKeywords.some(kw => from.includes(kw) || text.includes(kw));
+        // 광고/뉴스데일리/홍보성 메일 AI 및 키워드로 제외
+        const isAdMail = newsAdKeywords.some(kw => from.includes(kw) || text.includes(kw));
         let todoFlag = 0;
         if (!isAdMail) {
+          // AI 모델이 있다면 광고/뉴스데일리 분류도 추가 가능 (예시)
+          if (typeof session !== 'undefined' && session) {
+            try {
+              await loadModel();
+              const inputTensor = new ort.Tensor('string', [text], [1]);
+              const feeds = { input: inputTensor };
+              const results = await session.run(feeds);
+              const score = results.output.data[0];
+              // 예: 0.2 이하이면 광고/뉴스로 간주
+              if (score < 0.2) continue; // 광고/뉴스로 분류된 경우 emails에 저장하지 않음
+            } catch (err) {}
+          }
           const hasDeadline = deadlinePatterns.some(re => text.match(re));
           if (hasDeadline) {
             try {
@@ -608,6 +621,10 @@ app.whenReady().then(() => {
               todoFlag = 1;
             }
           }
+        } else {
+          // 광고/뉴스데일리 메일은 emails 테이블에서 삭제
+          db.prepare('DELETE FROM emails WHERE id = ?').run(mail.id);
+          continue;
         }
         db.prepare('UPDATE emails SET todo_flag = ? WHERE id = ?').run(todoFlag, mail.id);
         // todo_flag=1이면 todos에 insert (중복 방지)

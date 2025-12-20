@@ -108,12 +108,6 @@
           <rect x="10.5" y="8.5" width="1.2" height="3.5" rx="0.6" fill="#7affe4"/>
         </svg>
       </button>
-      <button title="이메일 연동">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="2.5" y="5" width="15" height="10" rx="2" stroke="#00b48a" stroke-width="1.5" fill=""/>
-          <path d="M3.5 6l6.5 6 6.5-6" stroke="#00b48a" stroke-width="1.5" fill="none"/>
-        </svg>
-      </button>
       <button title="환경설정">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M10 6.5v-2M10 15.5v-2M13.5 10h2M4.5 10h2M13.03 13.03l1.42 1.42M5.55 5.55l1.42 1.42M13.03 6.97l1.42-1.42M5.55 14.45l1.42-1.42" stroke="#00b48a" stroke-width="1.2" stroke-linecap="round"/>
@@ -135,7 +129,7 @@
       let contentHtml = "";
         if (idx === 0) {
           contentHtml = `
-          <h2 id=\"mainTitle\" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🏠 홈(Home) 화면</h2>
+          <h2 id=\"mainTitle\" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>홈(Home) 화면</h2>
           <div style="width:100%;max-width:360px;margin:0 auto 12px auto;display:flex;gap:8px;">
             <input type="text" id="addTodoInput" placeholder="할일 입력" style="flex:1;padding:8px 12px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;" />
             <input type="date" id="addTodoDeadline" style="padding:8px 12px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;" />
@@ -182,7 +176,41 @@
         <div style=\"color:#888;font-size:0.98em;\">여기서 키워드를 관리할 수 있습니다.</div>
         `;
       } else if (idx === 2) {
-        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;display:flex;align-items:center;gap:10px;'>이메일 목록 <span id='emailCount' style='font-size:0.9em;color:#0093b4;'></span><button id='reloadEmailBtn' style='margin-left:8px;padding:4px 12px;font-size:0.95em;background:#eaf6ff;border:1px solid #b3d8f8;border-radius:6px;cursor:pointer;'>메일 불러오기</button><button id='excludeAllEmailBtn' style='margin-left:8px;padding:4px 12px;font-size:0.95em;background:#e57373;color:#fff;border:none;border-radius:6px;cursor:pointer;'>전체 제외</button></h2><div style='margin-bottom:10px;'><label for='emailSortSelect' style='font-size:0.98em;color:#0093b4;font-weight:bold;margin-right:8px;'>정렬:</label><select id='emailSortSelect' style='padding:4px 10px;border-radius:6px;border:1px solid #7be2c5;font-size:1em;'><option value='date-desc'>수신날짜 최신순</option><option value='date-asc'>수신날짜 오래된순</option><option value='from'>수신자순</option><option value='todo'>할일 우선</option></select></div><div id='emailListLoading' style='color:#888;margin-bottom:12px;'>메일 목록을 불러오는 중...</div><ul id='emailList' style='padding:0;list-style:none;max-height:420px;overflow-y:auto;border:1px solid #e0e0e0;background:#f8fffd;'></ul>`;
+        // 이메일 목록 화면 삭제됨
+        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>환경설정</h2>
+        <form id='mailSettingsForm' style='display:flex;flex-direction:column;gap:18px;align-items:stretch;margin-top:18px;max-width:340px;margin-left:auto;margin-right:auto;'>
+          <div style='display:flex;flex-direction:column;gap:8px;'>
+            <label style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>방식/보안</label>
+            <select id='protocolSecurity' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;'>
+              <option value='imap'>IMAP (일반, 143)</option>
+              <option value='imap-secure'>IMAP (SSL, 993)</option>
+              <option value='pop3-secure'>POP3 (보안, 995)</option>
+              <option value='pop3'>POP3 (일반, 110)</option>
+              <option value='custom'>사용자 입력</option>
+            </select>
+            <div id='customPortDiv' style='display:none;flex-direction:column;gap:8px;margin-top:8px;'>
+              <label for='customPort' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>포트</label>
+              <input id='customPort' type='number' placeholder='포트번호 입력' min='1' max='65535' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
+            </div>
+          </div>
+          <div style='display:flex;flex-direction:column;gap:8px;'>
+            <label for='host' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>서버</label>
+            <input id='host' type='text' placeholder='mail.example.com' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
+          </div>
+          <div style='display:flex;flex-direction:column;gap:8px;'>
+            <label for='mailId' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>아이디</label>
+            <input id='mailId' type='text' placeholder='user@email.com' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
+          </div>
+          <div style='display:flex;flex-direction:column;gap:8px;'>
+            <label for='mailPw' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>비밀번호</label>
+            <input id='mailPw' type='password' placeholder='비밀번호' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
+          </div>
+          <div style='display:flex;flex-direction:column;gap:8px;'>
+            <label for='mailSince' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>수신받은날짜</label>
+            <input id='mailSince' type='date' placeholder='yyyy-mm-dd' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
+          </div>
+          <button type='submit' style='margin-top:10px;background:#00b49a;color:#fff;border:none;padding:10px 36px;border-radius:8px;font-weight:bold;font-size:1.1em;cursor:pointer;box-shadow:0 2px 8px #00b49a22;'>저장</button>
+        </form>`;
       } else if (idx === 3) {
         contentHtml = `
         <h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>환경설정</h2>
@@ -282,16 +310,14 @@
               });
               // 제외 버튼 이벤트
               cardList.querySelectorAll('.remove-todo-btn').forEach(btn => {
-                btn.addEventListener('click', function(e) {
+                btn.addEventListener('click', async function(e) {
                   e.stopPropagation();
                   const id = this.dataset.id;
                   if (window.electronAPI && window.electronAPI.excludeTodo) {
-                    window.electronAPI.excludeTodo(Number(id));
+                    await window.electronAPI.excludeTodo(Number(id));
                   }
-                  const li = this.closest('li');
-                  if (li) li.remove();
-                  // 이메일 목록도 즉시 새로고침
-                  renderMainContent(2);
+                  // 홈화면을 재렌더링해서 제외된 할일을 반영
+                  renderMainContent(0);
                 });
               });
             } else {
