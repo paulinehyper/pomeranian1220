@@ -58,10 +58,11 @@ module.exports = markTodoEmails;
 
 function addTodosFromEmailTodos() {
   // 1. email.todo_flag=0인 메일 기반 todos를 삭제
+  // emails.todo_flag=0인 메일은 todos에서도 todo_flag=0으로 동기화(삭제 대신 숨김)
   const emailsToRemove = db.prepare('SELECT subject FROM emails WHERE todo_flag = 0').all();
-  const deleteTodo = db.prepare('DELETE FROM todos WHERE task = ? AND todo_flag = 1');
+  const updateTodo = db.prepare('UPDATE todos SET todo_flag = 0 WHERE task = ? AND todo_flag = 1');
   for (const mail of emailsToRemove) {
-    deleteTodo.run(mail.subject);
+    updateTodo.run(mail.subject);
   }
 
   // 2. email.todo_flag=1인 메일을 todos에 추가 (중복 방지)
