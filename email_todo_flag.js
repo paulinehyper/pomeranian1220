@@ -26,15 +26,22 @@ const REQUEST_PATTERNS = [
 ];
 
 function markTodoEmails() {
+  // settings 테이블에서 todo_keywords 값(쉼표 구분) 불러오기
+  let userKeywords = [];
+  try {
+    const row = db.prepare('SELECT value FROM settings WHERE key = ?').get('todo_keywords');
+    if (row && row.value) {
+      userKeywords = row.value.split(',').map(s => s.trim()).filter(Boolean);
+    }
+  } catch (e) {}
+  const keywords = userKeywords.length > 0 ? userKeywords : TODO_KEYWORDS;
   const emails = db.prepare('SELECT id, subject, body FROM emails WHERE todo_flag = 0').all();
   const update = db.prepare('UPDATE emails SET todo_flag = 1 WHERE id = ?');
   for (const mail of emails) {
     const text = (mail.subject + ' ' + (mail.body || '')).toLowerCase();
-    // 키워드, 요청/요구 패턴, 기한/날짜 패턴이 하나라도 있으면 todo로 분류
-    const hasTodoKeyword = TODO_KEYWORDS.some(k => text.includes(k));
-    const hasRequestPattern = REQUEST_PATTERNS.some(re => re.test(text));
-    const hasDeadlinePattern = DEADLINE_PATTERNS.some(re => re.test(text));
-    if (hasTodoKeyword || hasRequestPattern || hasDeadlinePattern) {
+    // 키워드가 본문에 하나라도 있으면 todo로 분류
+    const hasTodoKeyword = keywords.some(k => k && text.includes(k.toLowerCase()));
+    if (hasTodoKeyword) {
       update.run(mail.id);
     }
   }

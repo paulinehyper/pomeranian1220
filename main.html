@@ -430,14 +430,40 @@
                     const addBtn = item.querySelector('.add-todo-btn');
                     const removeBtn = item.querySelector('.remove-todo-btn');
                     if (addBtn) {
-                      addBtn.onclick = function(e) {
+                      addBtn.onclick = async function(e) {
                         e.stopPropagation();
                         const mail = sortedEmails[parseInt(this.dataset.idx)];
                         if (window.electronAPI && window.electronAPI.addTodoFromMail) {
-                          window.electronAPI.addTodoFromMail(mail.id).then(() => {
-                            renderMainContent(2);
-                            renderMainContent(0);
-                          });
+                          await window.electronAPI.addTodoFromMail(mail.id);
+                          // 할일 목록 즉시 갱신
+                          if (window.electronAPI.getTodos) {
+                            const todos = await window.electronAPI.getTodos();
+                            const cardList = document.getElementById('todoCardList');
+                            if (cardList && todos && todos.length > 0) {
+                              cardList.innerHTML = todos.map((todo, i) => {
+                                let deadlineStr = '';
+                                let ddayStr = '';
+                                if (todo.deadline && todo.deadline !== '없음') {
+                                  deadlineStr = todo.deadline;
+                                  const now = new Date();
+                                  const deadlineDate = new Date(todo.deadline);
+                                  if (!isNaN(deadlineDate)) {
+                                    const diff = Math.ceil((deadlineDate - now) / (1000*60*60*24));
+                                    ddayStr = diff >= 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
+                                  }
+                                }
+                                return `
+                                  <li class='todo-card' style='position:relative;'>
+                                    <span style="color:#03af7c;font-weight:normal;margin-right:8px;">${deadlineStr}${ddayStr ? ' (' + ddayStr + ')' : ''}</span>
+                                    <span>${todo.task || '(제목 없음)'}</span>
+                                    <button class="remove-todo-btn" data-id="${todo.id}" title="제외" style="position:absolute;top:10px;right:12px;background:#fff;border:1.5px solid #e0e0e0;color:#ff5a5a;border-radius:50%;width:26px;height:26px;font-size:1.1em;line-height:1;cursor:pointer;box-shadow:0 1px 4px #00b49a11;display:flex;align-items:center;justify-content:center;transition:background 0.15s,border 0.15s;">-</button>
+                                  </li>
+                                `;
+                              }).join('');
+                            } else if (cardList) {
+                              cardList.innerHTML = `<li style='color:#bbb;text-align:center;padding:24px 0;'>등록된 할일이 없습니다.</li>`;
+                            }
+                          }
                         }
                       };
                     }

@@ -1,3 +1,24 @@
+// 1분마다 emails 테이블에서 todo_flag=1인 메일을 todos 테이블에 실시간으로 추가
+setInterval(() => {
+  try {
+    const emails = db.prepare('SELECT * FROM emails WHERE todo_flag = 1').all();
+    for (const mail of emails) {
+      // unique_hash 생성
+      const crypto = require('crypto');
+      const hash = crypto.createHash('sha256').update((mail.subject||'')+(mail.body||'')+(mail.from_addr||'')+(mail.deadline||'')).digest('hex');
+      const exists = db.prepare('SELECT COUNT(*) as cnt FROM todos WHERE unique_hash = ?').get(hash);
+      if (exists.cnt === 0) {
+        const now = new Date();
+        const pad = n => n.toString().padStart(2, '0');
+        const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag, unique_hash, mail_flag) VALUES (?, ?, ?, ?, ?, 1, ?, ?)')
+          .run(dateStr, '', mail.subject, mail.body || '', mail.deadline || '', hash, 'Y');
+      }
+    }
+  } catch (e) {
+    console.error('메일→할일 실시간 동기화 오류:', e);
+  }
+}, 60 * 1000);
 const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
 const path = require('path');
 const autoLauncher = require('./auto-launch');
