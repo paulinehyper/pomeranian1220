@@ -301,16 +301,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 앱 시작 시 메일 설정이 있으면 자동 연동
   const settings = await window.electronAPI.getMailSettings();
   if (settings && settings.mail_id && settings.mail_pw && settings.protocol && settings.mail_type) {
-    // DB에서 가장 최근 메일 날짜 조회
-    const latest = await window.electronAPI.getEmails().then(list =>
-      list && list.length > 0 ? list.reduce((a, b) => a.received_at > b.received_at ? a : b).received_at : undefined
-    );
+    let mailSince = settings.mailSince || settings.mail_since;
+    if (mailSince === '') mailSince = undefined;
+    if (!mailSince) {
+      const emails = await window.electronAPI.getEmails();
+      mailSince = emails && emails.length > 0 ? emails.reduce((a, b) => a.created_at > b.created_at ? a : b).created_at : undefined;
+    }
     const info = {
       mailType: settings.mail_type,
       protocol: settings.protocol,
       mailId: settings.mail_id,
       mailPw: settings.mail_pw,
-      mailSince: latest,
+      mailSince,
       mailServer: settings.mail_server 
     };
     await window.electronAPI.mailConnect(info);
@@ -328,15 +330,19 @@ const syncBtn = document.querySelector('.settings-btn');
         return;
       }
       // DB에서 가장 최근 메일 날짜 조회
-      const latest = await window.electronAPI.getEmails().then(list =>
-        list && list.length > 0 ? list.reduce((a, b) => a.received_at > b.received_at ? a : b).received_at : undefined
-      );
+      let mailSince = settings.mailSince;
+      mailSince = settings.mailSince || settings.mail_since;
+      if (mailSince === '') mailSince = undefined;
+      if (!mailSince) {
+        const emails = await window.electronAPI.getEmails();
+        mailSince = emails && emails.length > 0 ? emails.reduce((a, b) => a.created_at > b.created_at ? a : b).created_at : undefined;
+      }
       const info = {
         mailType: settings.mail_type,
         protocol: settings.protocol,
         mailId: settings.mail_id,
         mailPw: settings.mail_pw,
-        mailSince: latest, 
+        mailSince,
         mailServer: settings.mail_server || ''
       };
       // 메일 연동(최신 메일 이후만)

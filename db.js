@@ -14,7 +14,15 @@ if (!fs.existsSync(dbDir)) {
 }
 const dbPath = path.join(dbDir, 'todo.db');
 console.log('DB 경로:', dbPath);
+
 const db = new Database(dbPath);
+
+// emails 테이블에 created_at 컬럼이 없으면 추가 (마이그레이션)
+const emailsPragma = db.prepare("PRAGMA table_info(emails)").all();
+const emailsHasCreatedAt = emailsPragma.some(col => col.name === 'created_at');
+if (!emailsHasCreatedAt) {
+  db.exec('ALTER TABLE emails ADD COLUMN created_at TEXT');
+}
 
 // mail_settings 테이블에 port 컬럼이 없으면 추가 (마이그레이션)
 const mailSettingsPragma = db.prepare("PRAGMA table_info(mail_settings)").all();

@@ -4,6 +4,8 @@ const db = require('./db');
 const tfClassifier = require('./tf_todo_classifier');
 
 function getImapConfig(info) {
+  // DEBUG: info.mailSince 값 확인
+  console.log('[mail.js] mailConnect info.mailSince:', info.mailSince);
   let resolvedHost = '';
   let port, tls;
   if (info.host && info.host.trim()) {
@@ -55,8 +57,14 @@ function setupMailIpc(main) {
         const box = await conn.openBox('INBOX');
         console.log('[syncMail] INBOX opened');
         let searchCriteria = [];
-        if (info.mailSince) {
-          searchCriteria = [["SINCE", new Date(info.mailSince)]];
+        const mailSince = info.mailSince || info.mail_since;
+        if (mailSince && typeof mailSince === 'string' && mailSince.trim() !== '') {
+          const sinceDate = new Date(mailSince);
+          if (!isNaN(sinceDate.getTime())) {
+            searchCriteria = [["SINCE", sinceDate]];
+          } else {
+            searchCriteria = ["ALL"];
+          }
         } else {
           searchCriteria = ["ALL"];
         }
@@ -157,7 +165,9 @@ function setupMailIpc(main) {
               todoFlag = null;
             }
             if (!exists.get(hash).cnt) {
-              insert.run(date, subject, body, from, todoFlag, hash, extractDeadline(body));
+              const createdAt = info.mailSince || new Date().toISOString();
+              db.prepare('INSERT INTO emails (received_at, subject, body, from_addr, todo_flag, unique_hash, deadline, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+                .run(date, subject, body, from, todoFlag, hash, extractDeadline(body), createdAt);
             }
           } catch (e) { /* 무시 */ }
         }
@@ -303,7 +313,9 @@ function setupMailIpc(main) {
             console.log(`[IMAP] 메일: subject="${subject}", from="${from}", date="${isoDate || date}"`);
             if (exists.get(hash).cnt === 0) {
               try {
-                insert.run(isoDate || date, subject, body, from, todoFlag, hash, deadline);
+                const createdAt = info.mailSince || new Date().toISOString();
+                db.prepare('INSERT INTO emails (received_at, subject, body, from_addr, todo_flag, unique_hash, deadline, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+                  .run(isoDate || date, subject, body, from, todoFlag, hash, deadline, createdAt);
                 console.log(`[IMAP] DB 저장 성공: subject="${subject}"`);
               } catch (err) {
                 console.error(`[IMAP] DB 저장 실패: subject="${subject}", error=`, err);
@@ -441,7 +453,9 @@ function setupMailIpc(main) {
                 }
                 const deadline = extractDeadline(subject + ' ' + body);
                 if (exists.get(hash).cnt === 0) {
-                  insert.run(date, subject, body, from, todoFlag, hash, deadline);
+                  const createdAt = info.mailSince || new Date().toISOString();
+                  db.prepare('INSERT INTO emails (received_at, subject, body, from_addr, todo_flag, unique_hash, deadline, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+                    .run(date, subject, body, from, todoFlag, hash, deadline, createdAt);
                 }
               } catch (e) {}
               if (fetched === msgcount && !done) {
