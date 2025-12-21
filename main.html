@@ -121,23 +121,30 @@
               </div>`;
           }).join('') : '<p style="text-align:center;color:#bbb;padding-top:20px;">할일이 없습니다.</p>';
 
-          // 제목 클릭 시 취소선/휴지통 토글
+          // 클릭 이벤트 로직 수정: 완료 상태에서 클릭 시 미완료로, 미완료에서 클릭 시 완료로
           document.querySelectorAll('.todo-card').forEach(card => {
             const content = card.querySelector('.todo-content');
             const delBtn = card.querySelector('.delete-btn');
             const id = card.getAttribute('data-id');
-            // 제목 클릭 시 DB todo_flag=2로 변경
+
             content.onclick = async function(e) {
               const isDone = card.classList.contains('completed');
-              if (!isDone && window.electronAPI && window.electronAPI.setTodoComplete) {
-                await window.electronAPI.setTodoComplete(Number(id), 2);
+              if (window.electronAPI && window.electronAPI.setTodoComplete) {
+                if (isDone) {
+                  // 이미 완료 상태라면 -> 미완료(1)로 원복
+                  await window.electronAPI.setTodoComplete(Number(id), 1);
+                } else {
+                  // 미완료 상태라면 -> 완료(2)로 변경
+                  await window.electronAPI.setTodoComplete(Number(id), 2);
+                }
                 await refreshTodos();
               }
             };
+
             delBtn.onclick = async function(e) {
               e.stopPropagation();
               if (window.electronAPI && window.electronAPI.setTodoComplete) {
-                await window.electronAPI.setTodoComplete(Number(id), 3); // 3: 완전 삭제
+                await window.electronAPI.setTodoComplete(Number(id), 3); // 3: 휴지통으로 이동
                 await refreshTodos();
               }
             };
