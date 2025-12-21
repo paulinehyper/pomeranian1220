@@ -98,8 +98,8 @@ ipcMain.on('open-mail-detail', (event, params) => {
 
 // get-todos, get-emails 핸들러는 앱 시작 시 한 번만 등록
 ipcMain.handle('get-todos', () => {
-  // todo_flag=1(할일) 전체 반환
-  const todos = db.prepare('SELECT * FROM todos WHERE todo_flag != 2 ORDER BY id').all();
+  // todo_flag 전체 반환 (완료 포함)
+  const todos = db.prepare('SELECT * FROM todos ORDER BY id').all();
   const now = new Date();
   return todos.map(todo => {
     let deadline = todo.deadline;
