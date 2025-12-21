@@ -295,7 +295,7 @@
                   <li class='todo-card' style='position:relative;'>
                     <span style="color:#03af7c;font-weight:normal;margin-right:8px;">${deadlineStr}${ddayStr ? ' (' + ddayStr + ')' : ''}</span>
                     <span>${todo.task || '(제목 없음)'}</span>
-                    <button class="complete-check-btn" data-id="${todo.id}" title="완료 체크" style="position:absolute;top:10px;right:12px;background:transparent;border:none;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;z-index:10;">
+                    <button class="complete-check-btn" data-id="${todo.id}" title="완료 체크" style="position:absolute;top:10px;right:12px;background:transparent;border:none;cursor:pointer;width:28px;height:28px;display:none;align-items:center;justify-content:center;z-index:10;">
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="12" cy="12" r="9" fill="#00b49cff" stroke="#00b49cff" stroke-width="1.5"/>
                         <path d="M8 12l3 3 5-5" stroke="#fff" stroke-width="2" fill="none"/>
@@ -316,7 +316,7 @@
                   // 취소선이 그어지면 체크 뱃지 표시
                   const checkBtn = this.querySelector('.complete-check-btn');
                   if (this.classList.contains('done')) {
-                    if (checkBtn) checkBtn.style.display = 'inline-block';
+                    if (checkBtn) checkBtn.style.display = 'flex';
                   } else {
                     if (checkBtn) checkBtn.style.display = 'none';
                   }
