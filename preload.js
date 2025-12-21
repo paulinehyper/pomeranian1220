@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 
 contextBridge.exposeInMainWorld('electronAPI', {
+      setTodoComplete: (id, flag) => ipcRenderer.invoke('set-todo-complete', id, flag),
     addTodoFromMail: (mailId) => ipcRenderer.invoke('add-todo-from-mail', mailId),
   minimize: () => ipcRenderer.send('minimize'),
   close: () => ipcRenderer.send('close'),
@@ -29,5 +30,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteAllTodos: () => ipcRenderer.invoke('delete-all-todos'),
   startMailSync: () => ipcRenderer.invoke('start-mail-sync'),
   stopMailSync: () => ipcRenderer.invoke('stop-mail-sync'),
-  openMailDetail: (params) => ipcRenderer.send('open-mail-detail', params)
+  openMailDetail: (params) => ipcRenderer.send('open-mail-detail', params),
+  onNewTodoAdded: (callback) => ipcRenderer.on('new-todo-added', callback)
 });

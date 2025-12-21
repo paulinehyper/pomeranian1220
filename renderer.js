@@ -1,3 +1,4 @@
+console.log('renderer.js loaded');
 // 환경설정(톱니바퀴) 아이콘 클릭 시 app-settings.html 새 창 열기
 document.addEventListener('DOMContentLoaded', () => {
   const cogBtn = document.querySelector('.cog-btn');
@@ -193,16 +194,39 @@ function renderList(todos) {
         // 할일 제목 클릭 시 취소선 토글
         const taskSpan = li.querySelector('.task');
         if (taskSpan) {
-          taskSpan.addEventListener('click', (e) => {
+          taskSpan.addEventListener('click', async (e) => {
+            console.log('taskSpan 클릭됨', item);
             let isNowCompleted = false;
             if (taskSpan.style.textDecoration === 'line-through') {
               taskSpan.style.textDecoration = '';
               taskSpan.style.color = '';
               isNowCompleted = false;
+              // DB에 미완료로 변경 (todo_flag=1)
+              if (typeof item.id === 'string' && item.id.startsWith('mail-')) {
+                await window.electronAPI.setEmailTodoFlag(item.id.replace('mail-', ''), 1);
+              } else {
+                if (window.electronAPI.setTodoComplete) {
+                  console.log('[setTodoComplete 호출] id:', item.id, 'flag: 1');
+                  await window.electronAPI.setTodoComplete(item.id, 1);
+                } else {
+                  console.warn('[setTodoComplete 미정의] id:', item.id, 'flag: 1');
+                }
+              }
             } else {
               taskSpan.style.textDecoration = 'line-through';
               taskSpan.style.color = '#aaa';
               isNowCompleted = true;
+              // DB에 완료로 변경 (todo_flag=2)
+              if (typeof item.id === 'string' && item.id.startsWith('mail-')) {
+                await window.electronAPI.setEmailTodoComplete(item.id.replace('mail-', ''));
+              } else {
+                if (window.electronAPI.setTodoComplete) {
+                  console.log('[setTodoComplete 호출] id:', item.id, 'flag: 2');
+                  await window.electronAPI.setTodoComplete(item.id, 2);
+                } else {
+                  console.warn('[setTodoComplete 미정의] id:', item.id, 'flag: 2');
+                }
+              }
             }
             // 뱃지 숫자 갱신 (완료시 -1, 취소시 +1)
             const badge = document.getElementById('todo-count-badge');
@@ -300,7 +324,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderList(todos);
   // 앱 시작 시 메일 설정이 있으면 자동 연동
   const settings = await window.electronAPI.getMailSettings();
-  if (settings && settings.mail_id && settings.mail_pw && settings.protocol && settings.mail_type) {
+    if (settings && settings.mail_id && settings.mail_pw && settings.protocol && settings.mail_type) {
+      const todoMails = await fetchTodoMails();
+      renderTodoMailCard(todoMails);
+
+      // 새 할일 추가 신호 수신 시 즉시 갱신
+      if (window.electronAPI.onNewTodoAdded) {
+        window.electronAPI.onNewTodoAdded(async () => {
+          console.log('[자동갱신] new-todo-added 이벤트 수신!');
+          const mails = await fetchTodoMails();
+          renderTodoMailCard(mails);
+          if (typeof fetchTodos === 'function' && typeof renderList === 'function') {
+            const todos = await fetchTodos();
+            renderList(todos);
+          }
+          // 알림(토스트) 표시 (선택)
+          if (window.Toastify) {
+            Toastify({ text: '새 할일이 추가되었습니다!', duration: 2500, gravity: 'top', position: 'center', backgroundColor: '#00b49a' }).showToast();
+          }
+        });
+      }
     let mailSince = settings.mailSince || settings.mail_since;
     if (mailSince === '') mailSince = undefined;
     if (!mailSince) {

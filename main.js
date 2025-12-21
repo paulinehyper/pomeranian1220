@@ -2,6 +2,8 @@
 setInterval(() => {
   try {
     const emails = db.prepare('SELECT * FROM emails WHERE todo_flag = 1').all();
+    const { BrowserWindow } = require('electron');
+    let newTodoAdded = false;
     for (const mail of emails) {
       // unique_hash 생성
       const crypto = require('crypto');
@@ -13,7 +15,13 @@ setInterval(() => {
         const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
         db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag, unique_hash, mail_flag) VALUES (?, ?, ?, ?, ?, 1, ?, ?)')
           .run(dateStr, '', mail.subject, mail.body || '', mail.deadline || '', hash, 'Y');
+        newTodoAdded = true;
       }
+    }
+    // 새 할일이 추가된 경우 renderer에 신호 전송
+    if (newTodoAdded) {
+      const win = BrowserWindow.getAllWindows()[0];
+      if (win) win.webContents.send('new-todo-added');
     }
   } catch (e) {
     console.error('메일→할일 실시간 동기화 오류:', e);
@@ -314,6 +322,12 @@ ipcMain.handle('set-email-todo-complete', (event, id) => {
   db.prepare('UPDATE emails SET todo_flag = 2 WHERE id = ?').run(id);
   return { success: true };
 });
+
+// 일반 할일 완료/미완료 상태 저장
+ipcMain.handle('set-todo-complete', (event, id, flag) => {
+  db.prepare('UPDATE todos SET todo_flag = ? WHERE id = ?').run(flag, id);
+  return { success: true };
+});
 let tray = null;
 const setupMailIpc = require('./mail');
 let mainWindow = null;
@@ -609,6 +623,8 @@ app.whenReady().then(() => {
       const deadlinePatterns = [
         /(\d{1,2})월\s?(\d{1,2})일.*제출/, /(\d{1,2})일까지.*제출/, /(\d{1,2})일.*제출/, /by\s+(\d{1,2})[./-](\d{1,2})/i, /submit.*by.*(\d{1,2})[./-](\d{1,2})/i
       ];
+      // 주요 할일 키워드 (제목/본문에 포함되면 무조건 todo_flag=1)
+      const todoKeywords = ['검토요망', '확인', '제출', '기한', '마감', '요청'];
       const adKeywords = ['instagram', 'facebook', '온라인투어', 'onlinetour', '페이스북', '인스타그램'];
       const emails = db.prepare('SELECT * FROM emails WHERE todo_flag IS NULL').all();
       for (const mail of emails) {
@@ -617,18 +633,24 @@ app.whenReady().then(() => {
         // 광고성 메일 제외
         const isAdMail = adKeywords.some(kw => from.includes(kw) || text.includes(kw));
         let todoFlag = 0;
+        // [개선] 주요 키워드 포함시 무조건 todo_flag=1
+        const hasTodoKeyword = todoKeywords.some(kw => text.includes(kw.toLowerCase()));
         if (!isAdMail) {
-          const hasDeadline = deadlinePatterns.some(re => text.match(re));
-          if (hasDeadline) {
-            try {
-              await loadModel();
-              const inputTensor = new ort.Tensor('string', [text], [1]);
-              const feeds = { input: inputTensor };
-              const results = await session.run(feeds);
-              const score = results.output.data[0];
-              todoFlag = score > 0.8 ? 1 : 0;
-            } catch (err) {
-              todoFlag = 1;
+          if (hasTodoKeyword) {
+            todoFlag = 1;
+          } else {
+            const hasDeadline = deadlinePatterns.some(re => text.match(re));
+            if (hasDeadline) {
+              try {
+                await loadModel();
+                const inputTensor = new ort.Tensor('string', [text], [1]);
+                const feeds = { input: inputTensor };
+                const results = await session.run(feeds);
+                const score = results.output.data[0];
+                todoFlag = score > 0.8 ? 1 : 0;
+              } catch (err) {
+                todoFlag = 1;
+              }
             }
           }
         }

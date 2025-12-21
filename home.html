@@ -162,6 +162,23 @@
       document.addEventListener('DOMContentLoaded', async () => {
         const todoMails = await fetchTodoMails();
         renderTodoMailCard(todoMails);
+        // 1분마다 메일 할일 카드 자동 새로고침
+        setInterval(async () => {
+          console.log('[home.html] 1분마다 자동 새로고침 실행');
+          const mails = await fetchTodoMails();
+          console.log('[home.html] fetchTodoMails 결과:', mails);
+          renderTodoMailCard(mails);
+        }, 60 * 1000);
+
+        // [자동갱신] new-todo-added 이벤트 수신 시 즉시 갱신
+        if (window.electronAPI && window.electronAPI.onNewTodoAdded) {
+          window.electronAPI.onNewTodoAdded(async () => {
+            console.log('[home.html] new-todo-added 이벤트 수신!');
+            const mails = await fetchTodoMails();
+            renderTodoMailCard(mails);
+            // 필요시 추가 렌더링 함수 호출 가능
+          });
+        }
       });
     // robust sidebar switching and event binding
     const sidebarBtns = document.querySelectorAll('.widget-home-sidebar button');

@@ -732,6 +732,18 @@
     });
     // 첫 화면 진입 시 이벤트 연결
     afterContentChange(0);
+      // 1분마다 홈화면(할일 카드) 자동 새로고침
+      setInterval(() => {
+        if (typeof renderMainContent === 'function') {
+          // 홈(0) 화면일 때만 갱신
+          const mainTitle = document.getElementById('mainTitle');
+          if (mainTitle && mainTitle.textContent.includes('홈')) {
+            renderMainContent(0);
+          }
+        }
+      }, 60 * 1000);
   </script>
+</body>
+  <script src="renderer.js"></script>
 </body>
 </html>
