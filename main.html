@@ -292,10 +292,10 @@
                   }
                 }
                 return `
-                  <li class='todo-card' style='position:relative;'>
+                  <li class='todo-card${todo.todo_flag === 2 ? ' done' : ''}' style='position:relative;'>
                     <span style="color:#03af7c;font-weight:normal;margin-right:8px;">${deadlineStr}${ddayStr ? ' (' + ddayStr + ')' : ''}</span>
                     <span>${todo.task || '(제목 없음)'}</span>
-                    <button class="complete-check-btn" data-id="${todo.id}" title="완료 체크" style="position:absolute;top:10px;right:12px;background:transparent;border:none;cursor:pointer;width:28px;height:28px;display:none;align-items:center;justify-content:center;z-index:10;">
+                    <button class="complete-check-btn" data-id="${todo.id}" title="완료 체크" style="position:absolute;top:10px;right:12px;background:transparent;border:none;cursor:pointer;width:28px;height:28px;display:${todo.todo_flag === 2 ? 'flex' : 'none'};align-items:center;justify-content:center;z-index:10;">
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="12" cy="12" r="9" fill="#00b49cff" stroke="#00b49cff" stroke-width="1.5"/>
                         <path d="M8 12l3 3 5-5" stroke="#fff" stroke-width="2" fill="none"/>
@@ -307,18 +307,28 @@
               }).join('');
               // 할일 카드 클릭 시 취소선 토글
               cardList.querySelectorAll('.todo-card').forEach(card => {
-                card.addEventListener('click', function(e) {
+                card.addEventListener('click', async function(e) {
                   // 제외 버튼 클릭 시에는 취소선 토글 방지
                   if (e.target.classList.contains('remove-todo-btn')) return;
                   // 체크 뱃지 클릭 시에는 취소선 토글 방지
                   if (e.target.classList.contains('complete-check-btn') || e.target.closest('.complete-check-btn')) return;
-                  this.classList.toggle('done');
-                  // 취소선이 그어지면 체크 뱃지 표시
-                  const checkBtn = this.querySelector('.complete-check-btn');
-                  if (this.classList.contains('done')) {
+                  const id = this.querySelector('.complete-check-btn')?.dataset.id;
+                  const isDone = this.classList.contains('done');
+                  // 토글: 미완료→완료, 완료→미완료
+                  if (!isDone) {
+                    this.classList.add('done');
+                    const checkBtn = this.querySelector('.complete-check-btn');
                     if (checkBtn) checkBtn.style.display = 'flex';
+                    if (id && window.electronAPI && window.electronAPI.setTodoComplete) {
+                      await window.electronAPI.setTodoComplete(Number(id), 2);
+                    }
                   } else {
+                    this.classList.remove('done');
+                    const checkBtn = this.querySelector('.complete-check-btn');
                     if (checkBtn) checkBtn.style.display = 'none';
+                    if (id && window.electronAPI && window.electronAPI.setTodoComplete) {
+                      await window.electronAPI.setTodoComplete(Number(id), 1);
+                    }
                   }
                 });
                             cardList.querySelectorAll('.complete-check-btn').forEach(btn => {
