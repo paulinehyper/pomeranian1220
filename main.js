@@ -1,32 +1,32 @@
-// 1분마다 emails 테이블에서 todo_flag=1인 메일을 todos 테이블에 실시간으로 추가
-setInterval(() => {
-  try {
-    const emails = db.prepare('SELECT * FROM emails WHERE todo_flag = 1').all();
-    const { BrowserWindow } = require('electron');
-    let newTodoAdded = false;
-    for (const mail of emails) {
-      // unique_hash 생성
-      const crypto = require('crypto');
-      const hash = crypto.createHash('sha256').update((mail.subject||'')+(mail.body||'')+(mail.from_addr||'')+(mail.deadline||'')).digest('hex');
-      const exists = db.prepare('SELECT COUNT(*) as cnt FROM todos WHERE unique_hash = ?').get(hash);
-      if (exists.cnt === 0) {
-        const now = new Date();
-        const pad = n => n.toString().padStart(2, '0');
-        const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-        db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag, unique_hash, mail_flag) VALUES (?, ?, ?, ?, ?, 1, ?, ?)')
-          .run(dateStr, '', mail.subject, mail.body || '', mail.deadline || '', hash, 'Y');
-        newTodoAdded = true;
-      }
-    }
-    // 새 할일이 추가된 경우 renderer에 신호 전송
-    if (newTodoAdded) {
-      const win = BrowserWindow.getAllWindows()[0];
-      if (win) win.webContents.send('new-todo-added');
-    }
-  } catch (e) {
-    console.error('메일→할일 실시간 동기화 오류:', e);
-  }
-}, 60 * 1000);
+// (비활성화) 1분마다 emails 테이블에서 todo_flag=1인 메일을 todos 테이블에 실시간으로 추가
+// setInterval(() => {
+//   try {
+//     const emails = db.prepare('SELECT * FROM emails WHERE todo_flag = 1').all();
+//     const { BrowserWindow } = require('electron');
+//     let newTodoAdded = false;
+//     for (const mail of emails) {
+//       // unique_hash 생성
+//       const crypto = require('crypto');
+//       const hash = crypto.createHash('sha256').update((mail.subject||'')+(mail.body||'')+(mail.from_addr||'')+(mail.deadline||'')).digest('hex');
+//       const exists = db.prepare('SELECT COUNT(*) as cnt FROM todos WHERE unique_hash = ?').get(hash);
+//       if (exists.cnt === 0) {
+//         const now = new Date();
+//         const pad = n => n.toString().padStart(2, '0');
+//         const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+//         db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag, unique_hash, mail_flag) VALUES (?, ?, ?, ?, ?, 1, ?, ?)')
+//           .run(dateStr, '', mail.subject, mail.body || '', mail.deadline || '', hash, 'Y');
+//         newTodoAdded = true;
+//       }
+//     }
+//     // 새 할일이 추가된 경우 renderer에 신호 전송
+//     if (newTodoAdded) {
+//       const win = BrowserWindow.getAllWindows()[0];
+//       if (win) win.webContents.send('new-todo-added');
+//     }
+//   } catch (e) {
+//     console.error('메일→할일 실시간 동기화 오류:', e);
+//   }
+// }, 60 * 1000);
 const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
 const path = require('path');
 const autoLauncher = require('./auto-launch');
@@ -35,28 +35,8 @@ const { addTodosFromEmailTodos } = require('./email_todo_flag');
 
 // 이메일 id를 받아 해당 메일을 todo로 분류하는 IPC
 ipcMain.handle('add-todo-from-mail', (event, mailId) => {
-  try {
-    // 1. 해당 메일 unique_hash가 없으면 새로 생성
-    let mail = db.prepare('SELECT * FROM emails WHERE id=?').get(mailId);
-    if (!mail) return { success: false, error: '메일을 찾을 수 없음' };
-    if (!mail.unique_hash) {
-      const crypto = require('crypto');
-      mail.unique_hash = crypto.createHash('sha256').update((mail.subject||'')+(mail.body||'')+(mail.received_at||'')).digest('hex');
-      db.prepare('UPDATE emails SET unique_hash=? WHERE id=?').run(mail.unique_hash, mailId);
-    }
-    db.prepare('UPDATE emails SET todo_flag=1 WHERE id=?').run(mailId);
-    const exists = db.prepare('SELECT COUNT(*) as cnt FROM todos WHERE unique_hash = ? AND todo_flag = 1').get(mail.unique_hash).cnt;
-    if (exists === 0) {
-      const now = new Date();
-      const pad = n => n.toString().padStart(2, '0');
-      const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-      db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag, unique_hash, mail_flag) VALUES (?, ?, ?, ?, ?, 1, ?, ?)')
-        .run(dateStr, '', mail.subject, mail.body || '', mail.deadline || '', mail.unique_hash, 'Y');
-    }
-    return { success: true };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
+  // (비활성화) 이메일을 todo로 분류하는 기능
+  return { success: false, error: '이메일에서 todo로 분류 기능이 비활성화됨' };
 });
 
 // ...require 구문들...
@@ -119,7 +99,7 @@ ipcMain.on('open-mail-detail', (event, params) => {
 // get-todos, get-emails 핸들러는 앱 시작 시 한 번만 등록
 ipcMain.handle('get-todos', () => {
   // todo_flag=1(할일) 전체 반환
-  const todos = db.prepare('SELECT * FROM todos WHERE todo_flag=1 ORDER BY id').all();
+  const todos = db.prepare('SELECT * FROM todos WHERE todo_flag != 2 ORDER BY id').all();
   const now = new Date();
   return todos.map(todo => {
     let deadline = todo.deadline;

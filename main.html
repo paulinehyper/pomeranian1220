@@ -292,77 +292,21 @@
                   }
                 }
                 return `
-                  <li class='todo-card${todo.todo_flag === 2 ? ' done' : ''}' style='position:relative;'>
-                    <span style="color:#03af7c;font-weight:normal;margin-right:8px;">${deadlineStr}${ddayStr ? ' (' + ddayStr + ')' : ''}</span>
+                  <li class='todo-card${todo.todo_flag === 2 ? ' done' : ''}' style='position:relative;' data-id='${todo.id}'>
+                    <span style=\"color:#03af7c;font-weight:normal;margin-right:8px;\">${deadlineStr}${ddayStr ? ' (' + ddayStr + ')' : ''}</span>
                     <span>${todo.task || '(제목 없음)'}</span>
-                    <button class="complete-check-btn" data-id="${todo.id}" title="완료 체크" style="position:absolute;top:10px;right:12px;background:transparent;border:none;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;z-index:10;">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="9" fill="#00b49cff" stroke="#00b49cff" stroke-width="1.5"/>
-                        <path d="M8 12l3 3 5-5" stroke="#fff" stroke-width="2" fill="none"/>
-                      </svg>
-                    </button>
-                    <button class="remove-todo-btn" data-id="${todo.id}" title="제외" style="position:absolute;top:10px;right:44px;background:#fff;border:1.5px solid #e0e0e0;color:#ff5a5a;border-radius:50%;width:26px;height:26px;font-size:1.1em;line-height:1;cursor:pointer;box-shadow:0 1px 4px #00b49a11;display:flex;align-items:center;justify-content:center;transition:background 0.15s,border 0.15s;">-</button>
                   </li>
                 `;
               }).join('');
-              // 할일 카드 클릭 시 취소선 토글
+              // 카드 클릭 시 취소선 토글 및 todo_flag=2로 변경
               cardList.querySelectorAll('.todo-card').forEach(card => {
                 card.addEventListener('click', async function(e) {
-                  // 제외 버튼 클릭 시에는 취소선 토글 방지
-                  if (e.target.classList.contains('remove-todo-btn')) return;
-                  // 체크 뱃지 클릭 시에는 취소선 토글 방지
-                  if (e.target.classList.contains('complete-check-btn') || e.target.closest('.complete-check-btn')) return;
-                  const id = this.querySelector('.complete-check-btn')?.dataset.id;
-                  const isDone = this.classList.contains('done');
-                  // 토글: 미완료→완료, 완료→미완료
-                  if (!isDone) {
-                    this.classList.add('done');
-                    const checkBtn = this.querySelector('.complete-check-btn');
-                    if (checkBtn) checkBtn.style.display = 'flex';
-                    if (id && window.electronAPI && window.electronAPI.setTodoComplete) {
-                      await window.electronAPI.setTodoComplete(Number(id), 2);
-                    }
-                  } else {
-                    this.classList.remove('done');
-                    const checkBtn = this.querySelector('.complete-check-btn');
-                    if (checkBtn) checkBtn.style.display = 'none';
-                    if (id && window.electronAPI && window.electronAPI.setTodoComplete) {
-                      await window.electronAPI.setTodoComplete(Number(id), 1);
-                    }
+                  if (this.classList.contains('done')) return;
+                  this.classList.add('done');
+                  const id = this.getAttribute('data-id');
+                  if (id && window.electronAPI && window.electronAPI.setTodoComplete) {
+                    await window.electronAPI.setTodoComplete(Number(id), 2);
                   }
-                });
-                            cardList.querySelectorAll('.complete-check-btn').forEach(btn => {
-                                            cardList.querySelectorAll('.complete-check-btn').forEach(btn => {
-                                              btn.addEventListener('click', async function(e) {
-                                                e.stopPropagation();
-                                                const id = this.dataset.id;
-                                                if (id && window.electronAPI && window.electronAPI.setTodoComplete) {
-                                                  await window.electronAPI.setTodoComplete(Number(id), 2);
-                                                }
-                                                renderMainContent(0);
-                                              });
-                                            });
-                              btn.addEventListener('click', async function(e) {
-                                e.stopPropagation();
-                                const card = this.closest('.todo-card');
-                                const id = card && card.querySelector('.remove-todo-btn') ? card.querySelector('.remove-todo-btn').dataset.id : null;
-                                if (id && window.electronAPI && window.electronAPI.excludeTodo) {
-                                  await window.electronAPI.excludeTodo(Number(id));
-                                }
-                                renderMainContent(0);
-                              });
-                            });
-              });
-              // 제외 버튼 이벤트
-              cardList.querySelectorAll('.remove-todo-btn').forEach(btn => {
-                btn.addEventListener('click', async function(e) {
-                  e.stopPropagation();
-                  const id = this.dataset.id;
-                  if (window.electronAPI && window.electronAPI.excludeTodo) {
-                    await window.electronAPI.excludeTodo(Number(id));
-                  }
-                  // 홈화면을 재렌더링해서 제외된 할일을 반영
-                  renderMainContent(0);
                 });
               });
             } else {
@@ -715,33 +659,21 @@
                 }
               }
               return `
-                <li class='todo-card${todo.todo_flag === 2 ? ' done' : ''}' style='position:relative;'>
+                <li class='todo-card${todo.todo_flag === 2 ? ' done' : ''}' style='position:relative;' data-id='${todo.id}'>
                   <span style="color:#03af7c;font-weight:normal;margin-right:8px;">${deadlineStr}${ddayStr ? ' (' + ddayStr + ')' : ''}</span>
                   <span>${todo.task || '(제목 없음)'}</span>
-                  <button class="complete-check-btn" data-id="${todo.id}" title="완료 체크" style="position:absolute;top:10px;right:12px;background:transparent;border:none;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;z-index:10;">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="12" cy="12" r="9" fill="#00b49cff" stroke="#00b49cff" stroke-width="1.5"/>
-                      <path d="M8 12l3 3 5-5" stroke="#fff" stroke-width="2" fill="none"/>
-                    </svg>
-                  </button>
-                  <button class="remove-todo-btn" data-id="${todo.id}" title="제외" style="position:absolute;top:10px;right:44px;background:#fff;border:1.5px solid #e0e0e0;color:#ff5a5a;border-radius:50%;width:26px;height:26px;font-size:1.1em;line-height:1;cursor:pointer;box-shadow:0 1px 4px #00b49a11;display:flex;align-items:center;justify-content:center;transition:background 0.15s,border 0.15s;">-</button>
                 </li>
               `;
             }).join('');
+            // 카드 클릭 시 취소선 토글 및 todo_flag=2로 변경
             cardList.querySelectorAll('.todo-card').forEach(card => {
-              card.addEventListener('click', function(e) {
-                if (e.target.classList.contains('remove-todo-btn')) return;
-                this.classList.toggle('done');
-              });
-            });
-            cardList.querySelectorAll('.remove-todo-btn').forEach(btn => {
-              btn.addEventListener('click', async function(e) {
-                e.stopPropagation();
-                const id = this.dataset.id;
-                if (window.electronAPI && window.electronAPI.excludeTodo) {
-                  await window.electronAPI.excludeTodo(Number(id));
+              card.addEventListener('click', async function(e) {
+                if (this.classList.contains('done')) return;
+                this.classList.add('done');
+                const id = this.getAttribute('data-id');
+                if (id && window.electronAPI && window.electronAPI.setTodoComplete) {
+                  await window.electronAPI.setTodoComplete(Number(id), 2);
                 }
-                renderMainContent(0);
               });
             });
           } else {

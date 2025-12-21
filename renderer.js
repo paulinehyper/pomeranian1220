@@ -92,8 +92,10 @@ function renderList(todos) {
       badge.textContent = notCompleted.length;
     }
   const list = document.querySelector('.schedule-list');
+  // todo_flag=2(완료)인 항목은 홈화면에서 제외
+  const filteredTodos = todos ? todos.filter(t => t.todo_flag !== 2) : [];
   list.innerHTML = '';
-  if (!todos || todos.length === 0) {
+  if (!filteredTodos || filteredTodos.length === 0) {
     const li = document.createElement('li');
     li.textContent = '할일이 없습니다.';
     li.style.color = '#888';
@@ -103,7 +105,7 @@ function renderList(todos) {
   }
   let dragSrcIdx = null;
   // 이메일(todo_flag 있는 mail- id)은 최신순, 일반 할일은 데드라인순
-  const sortedTodos = [...todos].sort((a, b) => {
+  const sortedTodos = [...filteredTodos].sort((a, b) => {
     const isMailA = typeof a.id === 'string' && a.id.startsWith('mail-');
     const isMailB = typeof b.id === 'string' && b.id.startsWith('mail-');
     if (isMailA && isMailB) {
