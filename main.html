@@ -214,6 +214,102 @@
             refreshTodos();
           };
           refreshTodos();
+        } else if (type === 'settings') {
+          widgetMain.innerHTML = `
+            <div style="animation: fadeIn 0.3s ease-out;">
+              <h2 style="color:#00b49a; margin:0 0 18px 0; font-size:1.1em; font-weight:800;">이메일 연동 설정</h2>
+              
+              <div class="input-section" style="padding: 20px; border: 1px solid #eef2f1;">
+                <form id="mailForm" style="display: flex; flex-direction: column; gap: 14px;">
+                  
+                  <div style="display: flex; gap: 8px;">
+                    <div style="flex: 1;">
+                      <label style="display:block; font-size:0.8em; font-weight:700; color:#00b49a; margin-bottom:5px; margin-left:4px;">서비스</label>
+                      <select id="mailType" class="todo-input" style="width: 100%; height: 42px; background: #fff; cursor: pointer;">
+                        <option value="naver">Naver</option>
+                        <option value="gmail">Gmail</option>
+                        <option value="custom">사용자 선택</option>
+                      </select>
+                    </div>
+                    <div style="flex: 1;">
+                      <label style="display:block; font-size:0.8em; font-weight:700; color:#00b49a; margin-bottom:5px; margin-left:4px;">연동 방식</label>
+                      <select id="protocol" class="todo-input" style="width: 100%; height: 42px; background: #fff; cursor: pointer;">
+                        <option value="imap-ssl">IMAP (보안, 993)</option>
+                        <option value="imap">IMAP (일반, 143)</option>
+                        <option value="pop3-ssl">POP3 (보안, 995)</option>
+                        <option value="pop3">POP3 (일반, 110)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style="display:block; font-size:0.8em; font-weight:700; color:#00b49a; margin-bottom:5px; margin-left:4px;">호스트 (Host)</label>
+                    <input type="text" id="host" class="todo-input" style="width: 100%; box-sizing: border-box;" placeholder="예: imap.naver.com" autocomplete="off">
+                  </div>
+
+                  <div style="display: flex; gap: 8px;">
+                    <div style="flex: 1.2;">
+                      <label style="display:block; font-size:0.8em; font-weight:700; color:#00b49a; margin-bottom:5px; margin-left:4px;">아이디</label>
+                      <input type="text" id="mailId" required class="todo-input" style="width: 100%; box-sizing: border-box;" placeholder="example@mail.com">
+                    </div>
+                    <div style="flex: 1;">
+                      <label style="display:block; font-size:0.8em; font-weight:700; color:#00b49a; margin-bottom:5px; margin-left:4px;">비밀번호</label>
+                      <input type="password" id="mailPw" required class="todo-input" style="width: 100%; box-sizing: border-box;" placeholder="••••••••">
+                    </div>
+                  </div>
+
+                  <div style="display: flex; align-items: flex-end; gap: 8px; margin-top: 6px;">
+                    <div style="flex: 1;">
+                      <label style="display:block; font-size:0.8em; font-weight:700; color:#00b49a; margin-bottom:5px; margin-left:4px;">수신 시작일</label>
+                      <input type="date" id="mailSince" class="todo-input" style="width: 100%; height: 42px; box-sizing: border-box; font-family: inherit;">
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                      <button type="button" id="viewEmailsBtn" class="add-btn" style="background: #fff; color: #00b49a; border: 1.5px solid #00b49a; padding: 0 15px; height: 42px; opacity: 0.5; pointer-events: none;">메일보기</button>
+                      <button type="submit" class="add-btn" style="height: 42px; padding: 0 20px;">연동하기</button>
+                    </div>
+                  </div>
+
+                </form>
+              </div>
+              <div id="syncStatusModal" style="margin-top: 12px; text-align: center; font-size: 0.85em; font-weight: 600; min-height: 1.2em;"></div>
+            </div>
+          `;
+          
+          // [로직] 폼 제출 이벤트 바인딩 (수정하지 않음)
+          setTimeout(() => {
+            const mailForm = document.getElementById('mailForm');
+            if (mailForm) {
+              mailForm.onsubmit = async function(e) {
+                e.preventDefault();
+                const settings = {
+                  protocol: document.getElementById('protocol').value,
+                  mailId: document.getElementById('mailId').value,
+                  mailPw: document.getElementById('mailPw').value,
+                  host: document.getElementById('host').value,
+                  port: '',
+                  mailSince: document.getElementById('mailSince').value
+                };
+                const protocolVal = settings.protocol;
+                if (protocolVal === 'imap-ssl') settings.port = '993';
+                else if (protocolVal === 'imap') settings.port = '143';
+                else if (protocolVal === 'pop3-ssl') settings.port = '995';
+                else if (protocolVal === 'pop3') settings.port = '110';
+                
+                const result = await window.electronAPI.saveMailSettings(settings);
+                const statusSpan = document.getElementById('syncStatusModal');
+                if (result.success) {
+                  statusSpan.textContent = '성공적으로 저장 및 연동되었습니다.';
+                  statusSpan.style.color = '#00b49a';
+                  const viewBtn = document.getElementById('viewEmailsBtn');
+                  viewBtn.style.opacity = '1';
+                  viewBtn.style.pointerEvents = 'auto';
+                } else {
+                  statusSpan.textContent = '저장 실패: ' + (result.error || '연결 확인');
+                  statusSpan.style.color = '#ff5e5e';
+                }
+              }
+            }
+          }, 100);
         } else {
           widgetMain.innerHTML = `<h2 style="color:#00b49a;font-size:1.1em;">${type} 페이지</h2>`;
         }
