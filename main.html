@@ -5,22 +5,36 @@
   <title>Main 위젯</title>
   <style>
     body { margin: 0; padding: 0; background: transparent; font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif; }
-    .widget-home { position: fixed; top: 40px; left: 40px; width: 500px; min-height: 540px; background: #f8fffd; border-radius: 18px; box-shadow: 0 4px 32px #00b49a22, 0 1.5px 0 #00b49a11; overflow: hidden; z-index: 10000; display: flex; flex-direction: column; }
+    .widget-home { position: fixed; top: 40px; left: 40px; width: 520px; min-height: 560px; background: #f8fffd; border-radius: 18px; box-shadow: 0 4px 32px #00b49a22, 0 1.5px 0 #00b49a11; overflow: hidden; z-index: 10000; display: flex; flex-direction: column; }
     .widget-home-header { height: 64px; background: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; box-shadow: 0 2px 8px #00b49a11; font-size: 1.25em; font-weight: bold; color: #00b49a; -webkit-app-region: drag; user-select: none; }
     .widget-home-header * { -webkit-app-region: no-drag; }
     .widget-home-sidebar { position: absolute; top: 64px; left: 0; width: 54px; height: calc(100% - 64px); background: #f8fffd; box-shadow: 2px 0 8px #00b49a11; display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 18px; z-index: 2; }
-    .widget-home-main { margin-left: 54px; padding: 32px 18px 18px 18px; min-height: 400px; background: #f8fffd; flex: 1; z-index: 1; overflow-y: auto; }
+    .widget-home-main { margin-left: 54px; padding: 24px 18px 18px 18px; min-height: 400px; background: #f8fffd; flex: 1; z-index: 1; overflow-y: auto; }
     
     .widget-home-sidebar button { background: transparent; border: none; cursor: pointer; margin-bottom: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: background 0.2s; }
     .widget-home-sidebar button:hover { background: #e6fff7; }
     .widget-home-sidebar svg { width: 22px; height: 22px; }
 
     /* 할일 카드 스타일 */
-    .todo-card { background: #fff; border-radius: 10px; padding: 12px 16px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0, 180, 154, 0.1); display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #00b49a; }
-    .todo-content { font-weight: 500; color: #333; }
-    .todo-date { font-size: 0.8em; color: #999; }
+    .todo-card { background: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 2px 10px rgba(0, 180, 154, 0.08); display: flex; flex-direction: column; gap: 6px; border-left: 5px solid #00b49a; transition: transform 0.2s; }
+    .todo-card:hover { transform: translateY(-2px); }
+    .todo-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .todo-content { font-weight: 600; color: #333; font-size: 1.05em; }
+    .todo-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+    .todo-date { font-size: 0.85em; color: #777; background: #f0fcf9; padding: 2px 8px; border-radius: 4px; }
+    .d-day-badge { font-size: 0.8em; font-weight: bold; padding: 3px 8px; border-radius: 6px; }
+    .d-day-active { background: #00b49a; color: #fff; }
+    .d-day-urgent { background: #ff5e5e; color: #fff; }
+    .d-day-passed { background: #ddd; color: #777; }
+
+    /* 입력 폼 스타일 */
+    .input-section { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.03); border: 1px solid #eef2f1; }
+    .input-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .todo-input { flex: 1; padding: 10px; border-radius: 8px; border: 1.5px solid #7be2c5; outline: none; }
+    .date-input { width: 140px; padding: 8px; border-radius: 8px; border: 1.5px solid #7be2c5; color: #555; cursor: pointer; }
+    .add-btn { background: #00b49a; color: #fff; border: none; padding: 0 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    .add-btn:hover { background: #00937e; }
     
-    /* 키워드 스타일 */
     .keyword-item { display: inline-block; background: #e7fffe; color: #00b48a; padding: 6px 12px; border-radius: 20px; margin: 4px; border: 1px solid #7be2c5; font-size: 0.9em; font-weight: bold; }
   </style>
 </head>
@@ -58,21 +72,44 @@
       const widgetMain = document.getElementById('widgetHomeMain');
       const sidebarBtns = document.querySelectorAll('.widget-home-sidebar button');
 
-      // [공통] 목록 갱신 함수 (어디서든 호출 가능하도록 상위 스코프에 배치)
+      // [D-Day 계산 함수]
+      function getDDay(deadline) {
+        if (!deadline) return "";
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const target = new Date(deadline);
+        target.setHours(0, 0, 0, 0);
+        
+        const diffTime = target - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) return { text: "오늘까지", class: "d-day-urgent" };
+        if (diffDays > 0) return { text: `D-${diffDays}`, class: diffDays <= 3 ? "d-day-urgent" : "d-day-active" };
+        return { text: `지남`, class: "d-day-passed" };
+      }
+
+      // [공통] 목록 갱신 함수
       async function refreshTodos() {
         const container = document.getElementById('todoListContainer');
-        if (!container) return; // 메인 화면이 아닐 경우 중단
+        if (!container) return;
 
         if (window.electronAPI && window.electronAPI.getTodos) {
           try {
             const todos = await window.electronAPI.getTodos();
-            console.log("Fetched todos:", todos);
             container.innerHTML = (todos && todos.length) 
-              ? todos.map(t => `
+              ? todos.map(t => {
+                  const dday = t.deadline ? getDDay(t.deadline) : null;
+                  return `
                   <div class="todo-card">
-                    <span class="todo-content">${t.task}</span>
-                    <span class="todo-date">${new Date().toLocaleDateString()}</span>
-                  </div>`).join('')
+                    <div class="todo-top">
+                      <span class="todo-content">${t.task || t.content}</span>
+                      ${dday ? `<span class="d-day-badge ${dday.class}">${dday.text}</span>` : ''}
+                    </div>
+                    <div class="todo-bottom">
+                      <span class="todo-date">${t.deadline ? '마감: ' + t.deadline : '기한 없음'}</span>
+                    </div>
+                  </div>`;
+                }).join('')
               : '<p style="color:#bbb; text-align:center; padding-top:20px;">할일이 없습니다.</p>';
           } catch (err) {
             console.error("Failed to load todos:", err);
@@ -87,9 +124,15 @@
         if (type === 'main') {
           contentHtml = `
             <h2 style="color:#00b49a;margin:0 0 18px 0;font-size:1.2em;">할일 목록</h2>
-            <div style="display:flex;gap:8px;margin-bottom:20px;">
-              <input type="text" id="todoInput" placeholder="할일을 입력하세요" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #7be2c5;outline:none;">
-              <button id="addTodoBtn" style="background:#00b49a;color:#fff;border:none;padding:0 20px;border-radius:8px;font-weight:bold;cursor:pointer;">추가</button>
+            <div class="input-section">
+              <div class="input-row">
+                <input type="text" id="todoInput" class="todo-input" placeholder="할일을 입력하세요">
+                <button id="addTodoBtn" class="add-btn">추가</button>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:0.85em; color:#666;">마감 날짜:</span>
+                <input type="date" id="deadlineInput" class="date-input">
+              </div>
             </div>
             <div id="todoListContainer">로딩 중...</div>`;
         } 
@@ -98,7 +141,7 @@
             <h2 style="color:#00b49a;margin:0 0 18px 0;font-size:1.2em;">키워드 관리</h2>
             <div style="display:flex;gap:8px;margin-bottom:20px;">
               <input type="text" id="keywordInput" placeholder="새 키워드" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #7be2c5;outline:none;">
-              <button id="addKeywordBtn" style="background:#00b49a;color:#fff;border:none;padding:0 20px;border-radius:8px;font-weight:bold;cursor:pointer;">등록</button>
+              <button id="addKeywordBtn" class="add-btn">등록</button>
             </div>
             <div id="keywordListContainer">로딩 중...</div>`;
         } 
@@ -118,15 +161,11 @@
                 <label style="display:block;margin-bottom:5px;font-weight:bold;color:#0093b4;">비밀번호</label>
                 <input type="password" id="mailPw" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #7be2c5;box-sizing:border-box;">
               </div>
-              <button type="submit" style="background:#00b49a;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer;margin-top:10px;">저장하기</button>
+              <button type="submit" class="add-btn" style="padding:12px; margin-top:10px;">저장하기</button>
             </form>`;
-        }
-        else {
-          contentHtml = `<h2 style="color:#00b49a;">${type} 페이지</h2><p style="color:#888;">준비 중입니다.</p>`;
         }
 
         widgetMain.innerHTML = contentHtml;
-        // HTML이 DOM에 삽입된 후 로직 연결
         initPageLogic(type);
       }
 
@@ -134,32 +173,32 @@
       function initPageLogic(type) {
         if (type === 'main') {
           const input = document.getElementById('todoInput');
+          const dateInput = document.getElementById('deadlineInput');
           const addBtn = document.getElementById('addTodoBtn');
 
-          if (!addBtn || !input) return;
+          // 오늘 날짜를 기본값으로 설정 (선택 사항)
+          // dateInput.value = new Date().toISOString().substring(0, 10);
 
-          // 추가 버튼 클릭 이벤트
           addBtn.onclick = async () => {
             const val = input.value.trim();
+            const deadline = dateInput.value;
             if (!val) return;
             
-            console.log("Attempting to add todo:", val);
-
             if (window.electronAPI && window.electronAPI.insertTodo) {
               try {
-                // main.js의 insert-todo 핸들러는 { task, deadline, memo }를 기대함
-                const res = await window.electronAPI.insertTodo({ task: val });
-                console.log("Insert result:", res);
+                // task와 deadline을 함께 전송
+                const res = await window.electronAPI.insertTodo({ 
+                  task: val, 
+                  deadline: deadline || null 
+                });
                 
                 if (res === true || (res && res.success)) {
                   input.value = '';
-                  await refreshTodos();
-                } else {
-                  console.warn("Insert failed or returned unexpected result:", res);
+                  dateInput.value = '';
                   await refreshTodos();
                 }
               } catch (err) {
-                console.error("IPC Error during insertTodo:", err);
+                console.error("IPC Error:", err);
               }
             }
           };
@@ -168,7 +207,6 @@
           refreshTodos();
         }
 
-        // 키워드 관리 로직
         if (type === 'keyword') {
           const input = document.getElementById('keywordInput');
           const addBtn = document.getElementById('addKeywordBtn');
@@ -186,28 +224,12 @@
           addBtn.onclick = async () => {
             const val = input.value.trim();
             if (!val) return;
-            if (window.electronAPI && window.electronAPI.insertKeyword) {
-              await window.electronAPI.insertKeyword(val);
-              input.value = '';
-              await refreshKeywords();
-            }
+            await window.electronAPI.insertKeyword(val);
+            input.value = '';
+            await refreshKeywords();
           };
           refreshKeywords();
         }
-
-        // 환경 설정 로직
-        if (type === 'settings') {
-          const form = document.getElementById('settingsForm');
-          // 기존 데이터 로드 로직... (이하 동일)
-        }
-      }
-
-      // [추가] 외부에서 할일 추가 알림을 받을 때 (메일 동기화 등)
-      if (window.electronAPI && window.electronAPI.onNewTodoAdded) {
-        window.electronAPI.onNewTodoAdded(() => {
-          console.log("External todo added, refreshing...");
-          refreshTodos();
-        });
       }
 
       sidebarBtns.forEach(btn => {
@@ -218,7 +240,6 @@
         if (window.electronAPI) window.electronAPI.close();
       };
 
-      // 초기 실행
       renderMainContent('main');
     };
   </script>
