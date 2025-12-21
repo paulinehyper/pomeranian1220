@@ -203,32 +203,30 @@ function renderList(todos) {
             }
           });
           // 체크 뱃지 클릭 시 DB에서 삭제 및 목록 새로고침
-          const checkBtn = li.querySelector('.complete-check-btn');
-          if (checkBtn) {
-            checkBtn.addEventListener('click', async () => {
-              if (typeof item.id === 'string' && item.id.startsWith('mail-')) {
-                await window.electronAPI.setEmailTodoFlag(item.id.replace('mail-', ''), 0);
-              } else {
-                if (window.electronAPI.excludeTodo) {
-                  await window.electronAPI.excludeTodo(item.id);
-                }
+        const checkBtn = li.querySelector('.complete-check-btn');
+        if (checkBtn) {
+          checkBtn.addEventListener('click', async (e) => {
+            if (typeof item.id === 'string' && item.id.startsWith('mail-')) {
+              await window.electronAPI.setEmailTodoFlag(item.id.replace('mail-', ''), 0);
+            } else {
+              if (window.electronAPI.excludeTodo) {
+                await window.electronAPI.excludeTodo(item.id);
               }
-              const todos = await fetchTodos();
-              renderList(todos);
-              if (window.electronAPI.openEmails) {
-                window.electronAPI.openEmails();
-              }
-            });
-          }
-            // 뱃지 숫자 갱신 (완료시 -1, 취소시 +1)
-            const badge = document.getElementById('todo-count-badge');
-            if (badge) {
-              let current = parseInt(badge.textContent, 10) || 0;
-              if (isNowCompleted && current > 0) badge.textContent = current - 1;
-              if (!isNowCompleted) badge.textContent = current + 1;
+            }
+            const todos = await fetchTodos();
+            renderList(todos);
+            if (window.electronAPI.openEmails) {
+              window.electronAPI.openEmails();
             }
             e.stopPropagation();
           });
+        }
+        // 뱃지 숫자 갱신 (완료시 -1, 취소시 +1)
+        const badge = document.getElementById('todo-count-badge');
+        if (badge) {
+          let current = parseInt(badge.textContent, 10) || 0;
+          if (isNowCompleted && current > 0) badge.textContent = current - 1;
+          if (!isNowCompleted) badge.textContent = current + 1;
         }
     const editBtn = li.querySelector('.memo-edit-btn');
     const excludeBtn = li.querySelector('.exclude-btn');
@@ -307,8 +305,7 @@ function renderList(todos) {
         });
       });
     }
-    list.appendChild(li);
-  });
+    // (불필요한 list.appendChild(li); 및 닫는 괄호 제거)
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

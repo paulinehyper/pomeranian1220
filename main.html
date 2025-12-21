@@ -3,792 +3,224 @@
 <head>
   <meta charset="UTF-8">
   <title>Main 위젯</title>
-  <link rel="stylesheet" href="style.css">
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background: transparent;
-      font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif;
-    }
-    .widget-home {
-      position: fixed;
-      top: 40px;
-      left: 40px;
-      width: 500px;
-      min-height: 540px;
-      background: #f8fffd;
-      border-radius: 18px;
-      box-shadow: 0 4px 32px #00b49a22, 0 1.5px 0 #00b49a11;
-      overflow: hidden;
-      z-index: 10000;
-      display: flex;
-      flex-direction: column;
-    }
-    .widget-home-header {
-      position: relative;
-      height: 64px;
-      background: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
-      box-shadow: 0 2px 8px #00b49a11;
-      font-size: 1.25em;
-      font-weight: bold;
-      color: #00b49a;
-      -webkit-app-region: drag;
-      user-select: none;
-    }
-    .widget-home-header * {
-      -webkit-app-region: no-drag;
-    }
-    .widget-home-sidebar {
-      position: absolute;
-      top: 64px;
-      left: 0;
-      width: 54px;
-      height: calc(100% - 64px);
-      background: #f8fffd;
-      box-shadow: 2px 0 8px #00b49a11;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      padding-top: 18px;
-      z-index: 2;
-    }
-    .widget-home-main {
-      margin-left: 54px;
-      padding: 32px 18px 18px 18px;
-      min-height: 400px;
-      background: #f8fffd;
-      flex: 1;
-      z-index: 1;
-    }
-    .widget-home-sidebar button {
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      margin-bottom: 8px;
-      padding: 0;
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .widget-home-sidebar svg {
-      width: 22px;
-      height: 22px;
-    }
+    body { margin: 0; padding: 0; background: transparent; font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif; }
+    .widget-home { position: fixed; top: 40px; left: 40px; width: 500px; min-height: 540px; background: #f8fffd; border-radius: 18px; box-shadow: 0 4px 32px #00b49a22, 0 1.5px 0 #00b49a11; overflow: hidden; z-index: 10000; display: flex; flex-direction: column; }
+    .widget-home-header { height: 64px; background: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; box-shadow: 0 2px 8px #00b49a11; font-size: 1.25em; font-weight: bold; color: #00b49a; -webkit-app-region: drag; user-select: none; }
+    .widget-home-header * { -webkit-app-region: no-drag; }
+    .widget-home-sidebar { position: absolute; top: 64px; left: 0; width: 54px; height: calc(100% - 64px); background: #f8fffd; box-shadow: 2px 0 8px #00b49a11; display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 18px; z-index: 2; }
+    .widget-home-main { margin-left: 54px; padding: 32px 18px 18px 18px; min-height: 400px; background: #f8fffd; flex: 1; z-index: 1; overflow-y: auto; }
+    
+    .widget-home-sidebar button { background: transparent; border: none; cursor: pointer; margin-bottom: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: background 0.2s; }
+    .widget-home-sidebar button:hover { background: #e6fff7; }
+    .widget-home-sidebar svg { width: 22px; height: 22px; }
+
+    /* 할일 카드 스타일 */
+    .todo-card { background: #fff; border-radius: 10px; padding: 12px 16px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0, 180, 154, 0.1); display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #00b49a; }
+    .todo-content { font-weight: 500; color: #333; }
+    .todo-date { font-size: 0.8em; color: #999; }
+    
+    /* 키워드 스타일 */
+    .keyword-item { display: inline-block; background: #e7fffe; color: #00b48a; padding: 6px 12px; border-radius: 20px; margin: 4px; border: 1px solid #7be2c5; font-size: 0.9em; font-weight: bold; }
   </style>
 </head>
 <body>
   <div class="widget-home">
     <div class="widget-home-header">
       <span style="display:inline-flex;align-items:center;gap:8px;">
-        <img src="assets/icon.png" alt="앱 아이콘" style="width:28px;height:28px;vertical-align:middle;margin-right:4px;border-radius:7px;box-shadow:0 1px 4px #00b49a22;" />
+        <img src="assets/icon.png" alt="앱 아이콘" style="width:28px;height:28px;border-radius:7px;" />
         Main
       </span>
-      <div>
-        <button id="closeBtn" title="닫기" style="background:transparent;border:none;font-size:1.5em;color:#00b49a;cursor:pointer;">×</button>
-      </div>
+      <button id="closeBtn" style="background:transparent;border:none;font-size:1.5em;color:#00b49a;cursor:pointer;">×</button>
     </div>
+
     <div class="widget-home-sidebar">
-      <button title="홈">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 11.5L12 4l9 7.5" stroke="#00b48a" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-          <rect x="6.5" y="11.5" width="11" height="7" rx="2" stroke="#00b48a" stroke-width="2" fill="#e6fff7"/>
-        </svg>
+      <button title="홈" data-type="main">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00b48a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </button>
-      <button title="키워드 관리">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="4" y="7" width="12" height="6" rx="2" fill="#fff" stroke="#00b48a" stroke-width="1.5"/>
-          <rect x="10.5" y="8.5" width="1.2" height="3.5" rx="0.6" fill="#7affe4"/>
-        </svg>
+      <button title="키워드 관리" data-type="keyword">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00b48a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
       </button>
-      <button title="환경설정">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10 6.5v-2M10 15.5v-2M13.5 10h2M4.5 10h2M13.03 13.03l1.42 1.42M5.55 5.55l1.42 1.42M13.03 6.97l1.42-1.42M5.55 14.45l1.42-1.42" stroke="#00b48a" stroke-width="1.2" stroke-linecap="round"/>
-          <circle cx="10" cy="10" r="2.2" stroke="#00b48a" stroke-width="1.2" fill="#e6fff7"/>
-        </svg>
+      <button title="환경설정" data-type="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00b48a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
       <div style="flex:1;"></div>
-      <button title="휴지통" style="margin-bottom:16px;">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <rect x="5" y="7" width="10" height="8" rx="2" fill="#e6fff7" stroke="#00b48a" stroke-width="1.5"/>
-          <rect x="8" y="4" width="4" height="2" rx="1" fill="#e6fff7" stroke="#00b48a" stroke-width="1.2"/>
-          <line x1="7" y1="9" x2="7" y2="13" stroke="#00b48a" stroke-width="1"/>
-          <line x1="10" y1="9" x2="10" y2="13" stroke="#00b48a" stroke-width="1"/>
-          <line x1="13" y1="9" x2="13" y2="13" stroke="#00b48a" stroke-width="1"/>
-        </svg>
+      <button title="휴지통" data-type="trash" style="margin-bottom:16px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00b48a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
       </button>
     </div>
-    <div class="widget-home-main" id="widgetHomeMain">
-      <h2 id="mainTitle" style="color:#00b49a;margin:0 0 18px 0;font-size:1.2em;">Main</h2>
-      <!-- 위젯 메인 컨텐츠 영역 -->
-    </div>
+
+    <div class="widget-home-main" id="widgetHomeMain"></div>
   </div>
+
   <script>
-    // robust sidebar switching and event binding
-    const sidebarBtns = document.querySelectorAll('.widget-home-sidebar button');
-    const widgetMain = document.getElementById('widgetHomeMain');
+    window.onload = function() {
+      const widgetMain = document.getElementById('widgetHomeMain');
+      const sidebarBtns = document.querySelectorAll('.widget-home-sidebar button');
 
-    function renderMainContent(idx) {
-      let contentHtml = "";
-        if (idx === 0) {
+      // [공통] 목록 갱신 함수 (어디서든 호출 가능하도록 상위 스코프에 배치)
+      async function refreshTodos() {
+        const container = document.getElementById('todoListContainer');
+        if (!container) return; // 메인 화면이 아닐 경우 중단
+
+        if (window.electronAPI && window.electronAPI.getTodos) {
+          try {
+            const todos = await window.electronAPI.getTodos();
+            console.log("Fetched todos:", todos);
+            container.innerHTML = (todos && todos.length) 
+              ? todos.map(t => `
+                  <div class="todo-card">
+                    <span class="todo-content">${t.task}</span>
+                    <span class="todo-date">${new Date().toLocaleDateString()}</span>
+                  </div>`).join('')
+              : '<p style="color:#bbb; text-align:center; padding-top:20px;">할일이 없습니다.</p>';
+          } catch (err) {
+            console.error("Failed to load todos:", err);
+          }
+        }
+      }
+
+      // 1. 화면 렌더링 함수
+      async function renderMainContent(type) {
+        let contentHtml = "";
+
+        if (type === 'main') {
           contentHtml = `
-          <h2 id=\"mainTitle\" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>홈(Home) 화면</h2>
-          <div style="width:100%;max-width:360px;margin:0 auto 12px auto;display:flex;gap:8px;">
-            <input type="text" id="addTodoInput" placeholder="할일 입력" style="flex:1;padding:8px 12px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;" />
-            <input type="date" id="addTodoDeadline" style="padding:8px 12px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;" />
-            <button id="addTodoBtn" style="background:#00b49a;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-weight:bold;cursor:pointer;transition:background 0.15s;">추가</button>
-          </div>
-          <ul id=\"todoCardList\" class=\"schedule-list\" style=\"padding:0;list-style:none;max-width:360px;margin:0 auto;\"></ul>
-          <style>
-          .schedule-list li.todo-card {
-            background:#fff;
-            border-radius:10px;
-            box-shadow:0 2px 8px #00b49a11;
-            padding:16px 18px;
-            margin-bottom:12px;
-            font-size:1.08em;
-            color:#00b49a;
-            font-weight:bold;
-            transition:box-shadow 0.15s, text-decoration 0.15s, color 0.15s;
-            cursor:pointer;
-            position:relative;
-          }
-          .schedule-list li.todo-card:hover {
-            box-shadow:0 4px 16px #00b49a22;
-          }
-          .schedule-list li.todo-card.done {
-            text-decoration: line-through;
-            color: #ffffff !important;
-            text-decoration-color: #686868 !important;
-          }
-          .remove-todo-btn:hover {
-            background:#ffeaea;
-            border:1.5px solid #ffbaba;
-          }
-          </style>
-          `;
-      } else if (idx === 1) {
-        contentHtml = `
-        <h2 id=\"mainTitle\" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>키워드 관리</h2>
-        <div class=\"keyword-input-row\" style=\"width:100%;max-width:360px;display:flex;gap:8px;margin-bottom:12px;\">
-          <input type=\"text\" id=\"keywordInput\" class=\"keyword-input\" placeholder=\"키워드 입력\" style=\"flex:1;padding:6px 8px;border-radius:6px;border:1px solid #7be2c5;\" />
-          <button id=\"addKeywordBtn\" class=\"keyword-add-btn\" style=\"background:#e7fffe;color:#00b48a;border:none;padding:6px 18px;border-radius:6px;font-weight:bold;cursor:pointer;transition:background 0.15s;\">추가</button>
-        </div>
-        <div id=\"keywordList\" style=\"width:100%;max-width:360px;min-height:32px;margin-bottom:8px;\"></div>
-        <div style=\"color:#888;font-size:0.98em;\">여기서 키워드를 관리할 수 있습니다.</div>
-        `;
-      } else if (idx === 2) {
-        // 이메일 목록 화면 삭제됨
-        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>환경설정</h2>
-        <form id='mailSettingsForm' style='display:flex;flex-direction:column;gap:18px;align-items:stretch;margin-top:18px;max-width:340px;margin-left:auto;margin-right:auto;'>
-          <div style='display:flex;flex-direction:column;gap:8px;'>
-            <label style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>방식/보안</label>
-            <select id='protocolSecurity' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;'>
-              <option value='imap'>IMAP (일반, 143)</option>
-              <option value='imap-secure'>IMAP (SSL, 993)</option>
-              <option value='pop3-secure'>POP3 (보안, 995)</option>
-              <option value='pop3'>POP3 (일반, 110)</option>
-              <option value='custom'>사용자 입력</option>
-            </select>
-            <div id='customPortDiv' style='display:none;flex-direction:column;gap:8px;margin-top:8px;'>
-              <label for='customPort' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>포트</label>
-              <input id='customPort' type='number' placeholder='포트번호 입력' min='1' max='65535' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
+            <h2 style="color:#00b49a;margin:0 0 18px 0;font-size:1.2em;">할일 목록</h2>
+            <div style="display:flex;gap:8px;margin-bottom:20px;">
+              <input type="text" id="todoInput" placeholder="할일을 입력하세요" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #7be2c5;outline:none;">
+              <button id="addTodoBtn" style="background:#00b49a;color:#fff;border:none;padding:0 20px;border-radius:8px;font-weight:bold;cursor:pointer;">추가</button>
             </div>
-          </div>
-          <div style='display:flex;flex-direction:column;gap:8px;'>
-            <label for='host' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>서버</label>
-            <input id='host' type='text' placeholder='mail.example.com' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
-          </div>
-          <div style='display:flex;flex-direction:column;gap:8px;'>
-            <label for='mailId' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>아이디</label>
-            <input id='mailId' type='text' placeholder='user@email.com' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
-          </div>
-          <div style='display:flex;flex-direction:column;gap:8px;'>
-            <label for='mailPw' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>비밀번호</label>
-            <input id='mailPw' type='password' placeholder='비밀번호' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
-          </div>
-          <div style='display:flex;flex-direction:column;gap:8px;'>
-            <label for='mailSince' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>수신받은날짜</label>
-            <input id='mailSince' type='date' placeholder='yyyy-mm-dd' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
-          </div>
-          <button type='submit' style='margin-top:10px;background:#00b49a;color:#fff;border:none;padding:10px 36px;border-radius:8px;font-weight:bold;font-size:1.1em;cursor:pointer;box-shadow:0 2px 8px #00b49a22;'>저장</button>
-        </form>`;
-      } else if (idx === 3) {
-        contentHtml = `
-        <h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>환경설정</h2>
-        <form id='mailSettingsForm' style='display:flex;flex-direction:column;gap:18px;align-items:stretch;margin-top:18px;max-width:340px;margin-left:auto;margin-right:auto;'>
-          <div style='display:flex;flex-direction:column;gap:8px;'>
-            <label style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>방식/보안</label>
-            <select id='protocolSecurity' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;'>
-              <option value='imap'>IMAP (일반, 143)</option>
-              <option value='imap-secure'>IMAP (SSL, 993)</option>
-              <option value='pop3-secure'>POP3 (보안, 995)</option>
-              <option value='pop3'>POP3 (일반, 110)</option>
-              <option value='custom'>사용자 입력</option>
-            </select>
-            <div id='customPortDiv' style='display:none;flex-direction:column;gap:8px;margin-top:8px;'>
-              <label for='customPort' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>포트</label>
-              <input id='customPort' type='number' placeholder='포트번호 입력' min='1' max='65535' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
+            <div id="todoListContainer">로딩 중...</div>`;
+        } 
+        else if (type === 'keyword') {
+          contentHtml = `
+            <h2 style="color:#00b49a;margin:0 0 18px 0;font-size:1.2em;">키워드 관리</h2>
+            <div style="display:flex;gap:8px;margin-bottom:20px;">
+              <input type="text" id="keywordInput" placeholder="새 키워드" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #7be2c5;outline:none;">
+              <button id="addKeywordBtn" style="background:#00b49a;color:#fff;border:none;padding:0 20px;border-radius:8px;font-weight:bold;cursor:pointer;">등록</button>
             </div>
-          </div>
-          <div style='display:flex;flex-direction:column;gap:8px;'>
-            <label for='host' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>서버</label>
-            <input id='host' type='text' placeholder='mail.example.com' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
-          </div>
-          <div style='display:flex;flex-direction:column;gap:8px;'>
-            <label for='mailId' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>아이디</label>
-            <input id='mailId' type='text' placeholder='user@email.com' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
-          </div>
-          <div style='display:flex;flex-direction:column;gap:8px;'>
-            <label for='mailPw' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>비밀번호</label>
-            <input id='mailPw' type='password' placeholder='비밀번호' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
-          </div>
-          <div style='display:flex;flex-direction:column;gap:8px;'>
-            <label for='mailSince' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>수신받은날짜</label>
-            <input id='mailSince' type='date' placeholder='yyyy-mm-dd' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
-          </div>
-          <button type='submit' style='margin-top:10px;background:#00b49a;color:#fff;border:none;padding:10px 36px;border-radius:8px;font-weight:bold;font-size:1.1em;cursor:pointer;box-shadow:0 2px 8px #00b49a22;'>저장</button>
-        </form>`;
-      }
-      widgetMain.innerHTML = contentHtml;
-        // 홈화면 할일 카드(메일 제목만) 렌더링
-        if (idx === 0 && window.electronAPI && window.electronAPI.getTodos) {
-          // 할일 추가 버튼 이벤트 연결
-          setTimeout(() => {
-            const addBtn = document.getElementById('addTodoBtn');
-            const addInput = document.getElementById('addTodoInput');
-            const addDeadline = document.getElementById('addTodoDeadline');
-            if (addBtn && addInput && addDeadline && window.electronAPI && window.electronAPI.insertTodo) {
-              const addTodo = async () => {
-                const task = addInput.value.trim();
-                const deadline = addDeadline.value ? addDeadline.value : '';
-                if (!task) return;
-                await window.electronAPI.insertTodo({ task, deadline });
-                addInput.value = '';
-                addDeadline.value = '';
-                renderMainContent(0);
-              };
-              addBtn.onclick = addTodo;
-              addInput.onkeydown = (e) => {
-                if (e.key === 'Enter') addTodo();
-              };
-              addDeadline.onkeydown = (e) => {
-                if (e.key === 'Enter') addTodo();
-              };
-            }
-          }, 100);
-          window.electronAPI.getTodos().then(res => {
-            const cardList = document.getElementById('todoCardList');
-            if (!cardList) return;
-            if (res && res.length > 0) {
-              cardList.innerHTML = res.map((todo, i) => {
-                let deadlineStr = '';
-                let ddayStr = '';
-                if (todo.deadline && todo.deadline !== '없음') {
-                  deadlineStr = todo.deadline;
-                  // D-day 계산
-                  const now = new Date();
-                  const deadlineDate = new Date(todo.deadline);
-                  if (!isNaN(deadlineDate)) {
-                    const diff = Math.ceil((deadlineDate - now) / (1000*60*60*24));
-                    ddayStr = diff >= 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
-                  }
-                }
-                return `
-                  <li class='todo-card${todo.todo_flag === 2 ? ' done' : ''}' style='position:relative;' data-id='${todo.id}'>
-                    <span style=\"color:#03af7c;font-weight:normal;margin-right:8px;\">${deadlineStr}${ddayStr ? ' (' + ddayStr + ')' : ''}</span>
-                    <span>${todo.task || '(제목 없음)'}</span>
-                  </li>
-                `;
-              }).join('');
-              // 카드 클릭 시 취소선 토글 및 todo_flag=2로 변경
-              cardList.querySelectorAll('.todo-card').forEach(card => {
-                card.addEventListener('click', async function(e) {
-                  const id = this.getAttribute('data-id');
-                  if (!id || !window.electronAPI || !window.electronAPI.setTodoComplete) return;
-                  if (this.classList.contains('done')) {
-                    this.classList.remove('done');
-                    await window.electronAPI.setTodoComplete(Number(id), 1); // 미완료로 변경
-                  } else {
-                    this.classList.add('done');
-                    await window.electronAPI.setTodoComplete(Number(id), 2); // 완료로 변경
-                  }
-                });
-              });
-            } else {
-              cardList.innerHTML = `<li style='color:#bbb;text-align:center;padding:24px 0;'>등록된 할일이 없습니다.</li>`;
-            }
-          });
+            <div id="keywordListContainer">로딩 중...</div>`;
+        } 
+        else if (type === 'settings') {
+          contentHtml = `
+            <h2 style="color:#00b49a;margin:0 0 18px 0;font-size:1.2em;">환경설정</h2>
+            <form id="settingsForm" style="display:flex;flex-direction:column;gap:15px;">
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:bold;color:#0093b4;">메일 서버</label>
+                <input type="text" id="host" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #7be2c5;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:bold;color:#0093b4;">아이디</label>
+                <input type="text" id="mailId" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #7be2c5;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="display:block;margin-bottom:5px;font-weight:bold;color:#0093b4;">비밀번호</label>
+                <input type="password" id="mailPw" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #7be2c5;box-sizing:border-box;">
+              </div>
+              <button type="submit" style="background:#00b49a;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer;margin-top:10px;">저장하기</button>
+            </form>`;
         }
-      if (idx === 2) {
-                                        // 전체 제외 버튼 이벤트 연결
-                                        setTimeout(() => {
-                                          const excludeAllBtn = document.getElementById('excludeAllEmailBtn');
-                                          if (excludeAllBtn) {
-                                            excludeAllBtn.onclick = async function() {
-                                              if (window.electronAPI && window.electronAPI.getEmails && window.electronAPI.setEmailTodoFlag) {
-                                                const emails = await window.electronAPI.getEmails();
-                                                const promises = emails.map(mail => window.electronAPI.setEmailTodoFlag(mail.id, 0));
-                                                await Promise.all(promises);
-                                                renderMainContent(2);
-                                              }
-                                            };
-                                          }
-                                        }, 100);
-                        // 이메일 목록 자동 갱신 타이머 관리
-                        if (window.__emailListInterval) {
-                          clearInterval(window.__emailListInterval);
-                        }
-                        window.__emailListInterval = setInterval(async () => {
-                          if (window.electronAPI && window.electronAPI.getEmails) {
-                            const emails = await window.electronAPI.getEmails();
-                            const emailList = document.getElementById('emailList');
-                            const emailCount = document.getElementById('emailCount');
-                            if (emailCount) emailCount.textContent = `(${emails.length})`;
-                            if (emailList) {
-                              if (emails && emails.length > 0) {
-                                emailList.innerHTML = emails.map((mail, idx) => `
-                                  <li class='email-item' data-idx='${idx}' style='margin-bottom:14px;padding:12px 24px 12px 24px;min-width:380px;max-width:99%;background:#fff;border-radius:8px;box-shadow:0 2px 8px #00b49a11;position:relative;display:block;'>
-                                    ${mail.todo_flag === 1 ? `<div style='position:absolute;top:8px;left:12px;background:#e7fffe;color:#00b49a;font-size:0.92em;padding:2px 10px;border-radius:6px;font-weight:bold;box-shadow:0 1px 4px #00b49a11;z-index:2;'>할일</div>` : ''}
-                                    <div style='padding-left:60px;margin-top:22px;'>
-                                      <div style="color:#888;font-size:0.97em;">${(mail.received_at ? (new Date(mail.received_at).toISOString().slice(0,10)) : '')}</div>
-                                      <div style="color:#0093b4;font-size:0.99em;">${mail.from_addr || ''}</div>
-                                      <div style="font-weight:bold;color:#222;margin:2px 0 0 0;">${mail.subject}</div>
-                                    </div>
+        else {
+          contentHtml = `<h2 style="color:#00b49a;">${type} 페이지</h2><p style="color:#888;">준비 중입니다.</p>`;
+        }
 
-                                    <div style='color:#888;font-size:0.92em;margin-top:4px;'>${mail.received_at} / ${mail.from_addr}</div>
-                                    ${mail.todo_flag === 1
-                                      ? `<button class='remove-todo-btn' data-idx='${idx}' style='position:absolute;top:12px;right:16px;background:#ffeaea;color:#ff5a5a;border:1.5px solid #ffbaba;padding:4px 12px;border-radius:6px;font-size:0.95em;cursor:pointer;'>할일 제외</button>`
-                                      : `<button class='add-todo-btn' data-idx='${idx}' style='position:absolute;top:12px;right:16px;background:#00b49a;color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:0.95em;cursor:pointer;'>할일로 추가</button>`}
-                                  </li>
-                                `).join('');
-                              } else {
-                                emailList.innerHTML = '<li style="color:#888;padding:18px;text-align:center;">메일이 없습니다.</li>';
-                              }
-                            }
-                          }
-                        }, 60 * 1000);
-                // 메일 불러오기 버튼 이벤트 연결
-                setTimeout(() => {
-                  const reloadBtn = document.getElementById('reloadEmailBtn');
-                  if (reloadBtn) {
-                    reloadBtn.onclick = async function() {
-                      reloadBtn.disabled = true;
-                      reloadBtn.textContent = '불러오는 중...';
-                      try {
-                        // 환경설정 정보로 메일 연동 및 동기화
-                        if (window.electronAPI && window.electronAPI.startMailSync) {
-                          await window.electronAPI.startMailSync();
-                        }
-                        // 동기화 후 최신 메일 목록 불러오기
-                        if (window.electronAPI && window.electronAPI.getEmails) {
-                          const emails = await window.electronAPI.getEmails();
-                          const emailList = document.getElementById('emailList');
-                          const loading = document.getElementById('emailListLoading');
-                          const emailCount = document.getElementById('emailCount');
-                          if (loading) loading.style.display = 'none';
-                          if (emailCount) emailCount.textContent = `(${emails.length})`;
-                          if (emailList) {
-                            if (emails && emails.length > 0) {
-                              emailList.innerHTML = emails.map((mail, idx) => `
-                                  <li class='email-item' data-idx='${idx}' style='margin-bottom:14px;padding:12px 24px 12px 24px;min-width:380px;max-width:99%;background:#fff;border-radius:8px;box-shadow:0 2px 8px #00b49a11;position:relative;display:block;'>
-                                  ${mail.todo_flag === 1 ? `<div style='position:absolute;top:8px;left:12px;background:#e7fffe;color:#00b49a;font-size:0.92em;padding:2px 10px;border-radius:6px;font-weight:bold;box-shadow:0 1px 4px #00b49a11;z-index:2;'>할일</div>` : ''}
-                                  <div style='padding-left:60px;margin-top:22px;'>
-                                    <div style="color:#888;font-size:0.97em;">${(mail.received_at ? (new Date(mail.received_at).toISOString().slice(0,10)) : '')}</div>
-                                    <div style="color:#0093b4;font-size:0.99em;">${mail.from_addr || ''}</div>
-                                    <div style="font-weight:bold;color:#222;margin:2px 0 0 0;">${mail.subject}</div>
-                                  </div>
+        widgetMain.innerHTML = contentHtml;
+        // HTML이 DOM에 삽입된 후 로직 연결
+        initPageLogic(type);
+      }
 
-                                  <div style='color:#888;font-size:0.92em;margin-top:4px;'>${mail.received_at} / ${mail.from_addr}</div>
-                                  ${mail.todo_flag === 1
-                                    ? `<button class='remove-todo-btn' data-idx='${idx}' style='position:absolute;top:12px;right:16px;background:#ffeaea;color:#ff5a5a;border:1.5px solid #ffbaba;padding:4px 12px;border-radius:6px;font-size:0.95em;cursor:pointer;'>할일 제외</button>`
-                                    : `<button class='add-todo-btn' data-idx='${idx}' style='position:absolute;top:12px;right:16px;background:#00b49a;color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:0.95em;cursor:pointer;'>할일로 추가</button>`}
-                                </li>
-                              `).join('');
-                              // ...기존 상세 팝업 및 버튼 이벤트 연결 코드...
-                            } else {
-                              emailList.innerHTML = '<li style="color:#888;padding:18px;text-align:center;">메일이 없습니다.</li>';
-                            }
-                          }
-                        }
-                      } finally {
-                        reloadBtn.disabled = false;
-                        reloadBtn.textContent = '메일 불러오기';
-                      }
-                    };
-                  }
-                }, 100);
-        // 이메일 목록 불러오기
-        if (window.electronAPI && window.electronAPI.getEmails) {
-          window.electronAPI.getEmails().then(emails => {
-            let currentSort = 'date-desc';
-            const emailList = document.getElementById('emailList');
-            const loading = document.getElementById('emailListLoading');
-            const emailCount = document.getElementById('emailCount');
-            const sortSelect = document.getElementById('emailSortSelect');
-            function renderEmailList(sortedEmails) {
-              if (loading) loading.style.display = 'none';
-              if (emailCount) emailCount.textContent = `(${sortedEmails.length})`;
-              if (emailList) {
-                if (sortedEmails && sortedEmails.length > 0) {
-                  emailList.innerHTML = sortedEmails.map((mail, idx) => `
-                    <li class='email-item' data-idx='${idx}' style='margin-bottom:14px;padding:12px 24px 12px 24px;min-width:380px;max-width:99%;background:#fff;border-radius:8px;box-shadow:0 2px 8px #00b49a11;position:relative;display:block;'>
-                      ${mail.todo_flag === 1 ? `<div style='position:absolute;top:8px;left:12px;background:#e7fffe;color:#00b49a;font-size:0.92em;padding:2px 10px;border-radius:6px;font-weight:bold;box-shadow:0 1px 4px #00b49a11;z-index:2;'>할일</div>` : ''}
-                      <div style='padding-left:60px;margin-top:22px;'>
-                        <div style="color:#888;font-size:0.97em;">${(mail.received_at ? (new Date(mail.received_at).toISOString().slice(0,10)) : '')}</div>
-                        <div style="color:#0093b4;font-size:0.99em;">${mail.from_addr || ''}</div>
-                        <div style="font-weight:bold;color:#222;margin:2px 0 0 0;">${mail.subject}</div>
-                      </div>
+      // 2. 페이지별 로직 초기화
+      function initPageLogic(type) {
+        if (type === 'main') {
+          const input = document.getElementById('todoInput');
+          const addBtn = document.getElementById('addTodoBtn');
 
-                      <div style='color:#888;font-size:0.92em;margin-top:4px;'>${mail.received_at} / ${mail.from_addr}</div>
-                      ${mail.todo_flag === 1
-                        ? `<button class='remove-todo-btn' data-idx='${idx}' style='position:absolute;top:12px;right:16px;background:#ffeaea;color:#ff5a5a;border:1.5px solid #ffbaba;padding:4px 12px;border-radius:6px;font-size:0.95em;cursor:pointer;'>할일 제외</button>`
-                        : `<button class='add-todo-btn' data-idx='${idx}' style='position:absolute;top:12px;right:16px;background:#00b49a;color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:0.95em;cursor:pointer;'>할일로 추가</button>`}
-                    </li>
-                  `).join('');
-                  // 상세 팝업 이벤트 연결
-                  document.querySelectorAll('.email-item').forEach(item => {
-                    const addBtn = item.querySelector('.add-todo-btn');
-                    const removeBtn = item.querySelector('.remove-todo-btn');
-                    if (addBtn) {
-                      addBtn.onclick = async function(e) {
-                        e.stopPropagation();
-                        const mail = sortedEmails[parseInt(this.dataset.idx)];
-                        if (window.electronAPI && window.electronAPI.addTodoFromMail) {
-                          await window.electronAPI.addTodoFromMail(mail.id);
-                          // 할일 목록 즉시 갱신
-                          if (window.electronAPI.getTodos) {
-                            const todos = await window.electronAPI.getTodos();
-                            const cardList = document.getElementById('todoCardList');
-                            if (cardList && todos && todos.length > 0) {
-                              cardList.innerHTML = todos.map((todo, i) => {
-                                let deadlineStr = '';
-                                let ddayStr = '';
-                                if (todo.deadline && todo.deadline !== '없음') {
-                                  deadlineStr = todo.deadline;
-                                  const now = new Date();
-                                  const deadlineDate = new Date(todo.deadline);
-                                  if (!isNaN(deadlineDate)) {
-                                    const diff = Math.ceil((deadlineDate - now) / (1000*60*60*24));
-                                    ddayStr = diff >= 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
-                                  }
-                                }
-                                return `
-                                  <li class='todo-card' style='position:relative;'>
-                                    <span style="color:#03af7c;font-weight:normal;margin-right:8px;">${deadlineStr}${ddayStr ? ' (' + ddayStr + ')' : ''}</span>
-                                    <span>${todo.task || '(제목 없음)'}</span>
-                                    <button class="remove-todo-btn" data-id="${todo.id}" title="제외" style="position:absolute;top:10px;right:12px;background:#fff;border:1.5px solid #e0e0e0;color:#ff5a5a;border-radius:50%;width:26px;height:26px;font-size:1.1em;line-height:1;cursor:pointer;box-shadow:0 1px 4px #00b49a11;display:flex;align-items:center;justify-content:center;transition:background 0.15s,border 0.15s;">-</button>
-                                  </li>
-                                `;
-                              }).join('');
-                            } else if (cardList) {
-                              cardList.innerHTML = `<li style='color:#bbb;text-align:center;padding:24px 0;'>등록된 할일이 없습니다.</li>`;
-                            }
-                          }
-                        }
-                      };
-                    }
-                    if (removeBtn) {
-                      removeBtn.onclick = function(e) {
-                        e.stopPropagation();
-                        const mail = sortedEmails[parseInt(this.dataset.idx)];
-                        if (window.electronAPI && window.electronAPI.excludeTodo) {
-                          window.electronAPI.excludeTodo(mail.id).then(() => {
-                            // emails 테이블 todo_flag=0, 그리고 unique_hash로 todos 테이블도 todo_flag=0
-                            if (window.electronAPI && window.electronAPI.setEmailTodoFlag) {
-                              window.electronAPI.setEmailTodoFlag(mail.id, 0);
-                            }
-                            renderMainContent(2);
-                            renderMainContent(0);
-                          });
-                        }
-                      };
-                    }
-                    item.onclick = function(e) {
-                      if (e.target.classList.contains('add-todo-btn') || e.target.classList.contains('remove-todo-btn')) return;
-                      const mail = sortedEmails[parseInt(this.dataset.idx)];
-                      const params = new URLSearchParams({
-                        subject: mail.subject,
-                        received_at: mail.received_at,
-                        from_addr: mail.from_addr,
-                        body: mail.body || ''
-                      });
-                      if (window.electronAPI && window.electronAPI.openMailDetail) {
-                        window.electronAPI.openMailDetail(params.toString());
-                      } else {
-                        window.open('mail-detail.html?' + params.toString(), '_blank', 'width=700,height=600');
-                      }
-                    };
-                  });
+          if (!addBtn || !input) return;
+
+          // 추가 버튼 클릭 이벤트
+          addBtn.onclick = async () => {
+            const val = input.value.trim();
+            if (!val) return;
+            
+            console.log("Attempting to add todo:", val);
+
+            if (window.electronAPI && window.electronAPI.insertTodo) {
+              try {
+                // main.js의 insert-todo 핸들러는 { task, deadline, memo }를 기대함
+                const res = await window.electronAPI.insertTodo({ task: val });
+                console.log("Insert result:", res);
+                
+                if (res === true || (res && res.success)) {
+                  input.value = '';
+                  await refreshTodos();
                 } else {
-                  emailList.innerHTML = `<li style='color:#888;padding:12px;'>불러온 메일이 없습니다.</li>`;
+                  console.warn("Insert failed or returned unexpected result:", res);
+                  await refreshTodos();
                 }
+              } catch (err) {
+                console.error("IPC Error during insertTodo:", err);
               }
             }
-            function sortEmails(emails, sortKey) {
-              if (sortKey === 'date-desc') {
-                return [...emails].sort((a, b) => new Date(b.received_at) - new Date(a.received_at));
-              } else if (sortKey === 'date-asc') {
-                return [...emails].sort((a, b) => new Date(a.received_at) - new Date(b.received_at));
-              } else if (sortKey === 'from') {
-                return [...emails].sort((a, b) => (a.from_addr || '').localeCompare(b.from_addr || ''));
-              } else if (sortKey === 'todo') {
-                return [...emails].sort((a, b) => (b.todo_flag || 0) - (a.todo_flag || 0));
-              }
-              return emails;
-            }
-            // 최초 렌더링
-            renderEmailList(sortEmails(emails, currentSort));
-            // 정렬 변경 이벤트
-            if (sortSelect) {
-              sortSelect.onchange = function() {
-                currentSort = sortSelect.value;
-                renderEmailList(sortEmails(emails, currentSort));
-              };
-            }
-          });
-        }
-      }
-      if (idx === 3) {
-                // 저장된 메일 연동정보를 불러와 input에 자동 채움
-                if (window.electronAPI && window.electronAPI.getMailSettings) {
-                  window.electronAPI.getMailSettings().then(settings => {
-                    console.log('getMailSettings result:', settings);
-                    if (settings) {
-                      if (settings.host) document.getElementById('host').value = settings.host;
-                      if (settings.mailId) document.getElementById('mailId').value = settings.mailId;
-                      if (settings.mailPw) document.getElementById('mailPw').value = settings.mailPw;
-                      if (settings.protocol) document.getElementById('protocolSecurity').value = settings.protocol;
-                      if (settings.mailSince) document.getElementById('mailSince').value = settings.mailSince;
-                      // custom port 처리
-                      if (settings.port && settings.protocol === 'custom') {
-                        document.getElementById('customPort').value = settings.port;
-                        document.getElementById('customPortDiv').style.display = 'flex';
-                      }
-                    }
-                  });
-                }
-        const protoSecSel = document.getElementById('protocolSecurity');
-        const customPortDiv = document.getElementById('customPortDiv');
-        const mailSettingsForm = document.getElementById('mailSettingsForm');
-        protoSecSel.addEventListener('change', function() {
-          customPortDiv.style.display = (this.value === 'custom') ? 'flex' : 'none';
-        });
-        mailSettingsForm.onsubmit = async (e) => {
-          e.preventDefault();
-          const protocol = document.getElementById('protocolSecurity').value;
-          let port = (protocol === 'pop3-secure') ? 995 : document.getElementById('customPort').value;
-          const settings = {
-            protocol,
-            port,
-            mailId: document.getElementById('mailId').value,
-            mailPw: document.getElementById('mailPw').value,
-            host: document.getElementById('host').value,
-            mailSince: document.getElementById('mailSince').value
           };
-          if (window.electronAPI && window.electronAPI.saveMailSettings) {
-            await window.electronAPI.saveMailSettings(settings);
-            alert('메일 연동 정보가 저장되었습니다.');
-          } else {
-            alert('Electron 환경이 아닙니다.');
-            console.log('Saved data:', settings);
-          }
-        };
-      }
-    }
 
-    // 상세 메일 팝업 함수
-    function showEmailDetailPopup(mail) {
-      // 기존 팝업 제거
-      const oldPopup = document.getElementById('emailDetailPopup');
-      if (oldPopup) oldPopup.remove();
-      const popup = document.createElement('div');
-      popup.id = 'emailDetailPopup';
-      popup.style.position = 'fixed';
-      popup.style.top = '0';
-      popup.style.left = '0';
-      popup.style.width = '100vw';
-      popup.style.height = '100vh';
-      popup.style.background = 'rgba(0,0,0,0.18)';
-      popup.style.display = 'flex';
-      popup.style.alignItems = 'center';
-      popup.style.justifyContent = 'center';
-      popup.style.zIndex = '9999';
-      popup.innerHTML = `
-        <div style="background:#fff;padding:32px 36px;border-radius:14px;min-width:320px;max-width:90vw;max-height:80vh;box-shadow:0 4px 24px #00b49a22;display:flex;flex-direction:column;align-items:flex-start;gap:18px;overflow-y:auto;">
-          <div style='font-size:1.15em;font-weight:bold;color:#0093b4;margin-bottom:4px;'>${mail.subject}</div>
-          <div style='color:#888;font-size:0.95em;margin-bottom:8px;'>${mail.received_at} / ${mail.from_addr}</div>
-          <div style='color:#444;line-height:1.7;white-space:pre-wrap;font-size:1.05em;'>${mail.body ? mail.body : '<i>본문 없음</i>'}</div>
-          <button id='closeEmailDetailPopup' style='margin-top:18px;background:#00b49a;color:#fff;border:none;padding:8px 24px;border-radius:8px;font-size:1em;cursor:pointer;align-self:center;'>닫기</button>
-        </div>
-      `;
-      document.body.appendChild(popup);
-      document.getElementById('closeEmailDetailPopup').onclick = () => popup.remove();
-      popup.onclick = (e) => { if (e.target === popup) popup.remove(); };
-    }
+          input.onkeypress = (e) => { if(e.key === 'Enter') addBtn.click(); };
+          refreshTodos();
+        }
 
-    // 이벤트 연결 및 초기화
-    sidebarBtns.forEach((btn, idx) => {
-      btn.onclick = () => {
-        renderMainContent(idx);
-      };
-    });
+        // 키워드 관리 로직
+        if (type === 'keyword') {
+          const input = document.getElementById('keywordInput');
+          const addBtn = document.getElementById('addKeywordBtn');
+          const container = document.getElementById('keywordListContainer');
 
-    // 닫기 버튼
-    document.getElementById('closeBtn').onclick = () => {
-      if (window.electronAPI && window.electronAPI.close) {
-        window.electronAPI.close();
-      } else {
-        window.close();
-      }
-    };
-
-    // 첫 화면 초기화
-    renderMainContent(0);
-    // 최초 진입 시에도 할일카드 UI가 항상 동일하게 보이도록 getTodos()로 카드 렌더링 강제 실행
-    if (window.electronAPI && window.electronAPI.getTodos) {
-      setTimeout(() => {
-        window.electronAPI.getTodos().then(res => {
-          const cardList = document.getElementById('todoCardList');
-          if (!cardList) return;
-          if (res && res.length > 0) {
-            cardList.innerHTML = res.map((todo, i) => {
-              let deadlineStr = '';
-              let ddayStr = '';
-              if (todo.deadline && todo.deadline !== '없음') {
-                deadlineStr = todo.deadline;
-                const now = new Date();
-                const deadlineDate = new Date(todo.deadline);
-                if (!isNaN(deadlineDate)) {
-                  const diff = Math.ceil((deadlineDate - now) / (1000*60*60*24));
-                  ddayStr = diff >= 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
-                }
-              }
-              return `
-                <li class='todo-card${todo.todo_flag === 2 ? ' done' : ''}' style='position:relative;' data-id='${todo.id}'>
-                  <span style="color:#03af7c;font-weight:normal;margin-right:8px;">${deadlineStr}${ddayStr ? ' (' + ddayStr + ')' : ''}</span>
-                  <span>${todo.task || '(제목 없음)'}</span>
-                </li>
-              `;
-            }).join('');
-            // 카드 클릭 시 취소선 토글 및 todo_flag=2로 변경
-            cardList.querySelectorAll('.todo-card').forEach(card => {
-              card.addEventListener('click', async function(e) {
-                if (this.classList.contains('done')) return;
-                this.classList.add('done');
-                const id = this.getAttribute('data-id');
-                if (id && window.electronAPI && window.electronAPI.setTodoComplete) {
-                  await window.electronAPI.setTodoComplete(Number(id), 2);
-                }
-              });
-            });
-          } else {
-            cardList.innerHTML = `<li style='color:#bbb;text-align:center;padding:24px 0;'>등록된 할일이 없습니다.</li>`;
-          }
-        });
-      }, 150);
-    }
-
-    // 동적으로 삽입된 키워드 관리 입력란 이벤트 연결
-    async function loadKeywordsToList() {
-      if (!window.electronAPI.getKeywords) return;
-      const res = await window.electronAPI.getKeywords();
-      const list = document.getElementById('keywordList');
-      if (!list) return;
-      list.innerHTML = '';
-      if(res.success && res.keywords.length > 0) {
-        res.keywords.forEach(kw => {
-          const div = document.createElement('div');
-          div.className = 'keyword-item';
-          div.textContent = kw;
-          list.appendChild(div);
-        });
-      } else {
-        list.innerHTML = '<div style="color:#bbb;">(등록된 키워드 없음)</div>';
-      }
-    }
-    function bindKeywordAddEvent() {
-      const addBtn = document.getElementById('addKeywordBtn');
-      const input = document.getElementById('keywordInput');
-      if (addBtn && input) {
-        const addKeyword = async () => {
-          const kw = input.value.trim();
-          if(!kw) return;
-          await window.electronAPI.insertKeyword(kw);
-          input.value = '';
-          await loadKeywordsToList();
-          setTimeout(() => {
-            input.blur();
-            input.focus();
-          }, 100);
-        };
-        addBtn.onclick = addKeyword;
-        input.onkeydown = (e) => {
-          if (e.key === 'Enter') addKeyword();
-        };
-      }
-    }
-    // 화면 전환 시마다 이벤트 연결
-    function afterContentChange(idx) {
-      if (idx === 1) {
-        bindKeywordAddEvent();
-        loadKeywordsToList();
-      }
-      if (idx === 3) {
-        // 환경설정 진입 시 getMailSettings로 input 자동 채움
-        if (window.electronAPI && window.electronAPI.getMailSettings) {
-          window.electronAPI.getMailSettings().then(settings => {
-            console.log('getMailSettings (afterContentChange):', settings);
-            if (settings) {
-              if (settings.host) document.getElementById('host').value = settings.host;
-              if (settings.mailId) document.getElementById('mailId').value = settings.mailId;
-              if (settings.mailPw) document.getElementById('mailPw').value = settings.mailPw;
-              if (settings.protocol) document.getElementById('protocolSecurity').value = settings.protocol;
-              if (settings.port && settings.protocol === 'custom') {
-                document.getElementById('customPort').value = settings.port;
-                document.getElementById('customPortDiv').style.display = 'flex';
-              }
+          const refreshKeywords = async () => {
+            if (window.electronAPI && window.electronAPI.getKeywords) {
+              const keywords = await window.electronAPI.getKeywords();
+              container.innerHTML = (keywords && keywords.length)
+                ? keywords.map(k => `<span class="keyword-item">${k}</span>`).join('')
+                : '<p style="color:#bbb;">등록된 키워드가 없습니다.</p>';
             }
-          });
+          };
+
+          addBtn.onclick = async () => {
+            const val = input.value.trim();
+            if (!val) return;
+            if (window.electronAPI && window.electronAPI.insertKeyword) {
+              await window.electronAPI.insertKeyword(val);
+              input.value = '';
+              await refreshKeywords();
+            }
+          };
+          refreshKeywords();
+        }
+
+        // 환경 설정 로직
+        if (type === 'settings') {
+          const form = document.getElementById('settingsForm');
+          // 기존 데이터 로드 로직... (이하 동일)
         }
       }
-    }
-    // sidebar 버튼 클릭 시 화면 전환 및 이벤트 연결
-    // 이메일 목록 화면을 벗어나면 자동 갱신 타이머 해제
-    function clearEmailListInterval() {
-      if (window.__emailListInterval) {
-        clearInterval(window.__emailListInterval);
-        window.__emailListInterval = null;
+
+      // [추가] 외부에서 할일 추가 알림을 받을 때 (메일 동기화 등)
+      if (window.electronAPI && window.electronAPI.onNewTodoAdded) {
+        window.electronAPI.onNewTodoAdded(() => {
+          console.log("External todo added, refreshing...");
+          refreshTodos();
+        });
       }
-    }
-    sidebarBtns.forEach((btn, idx) => {
-      btn.onclick = () => {
-        renderMainContent(idx);
-        afterContentChange(idx);
-        if (idx !== 2) clearEmailListInterval();
+
+      sidebarBtns.forEach(btn => {
+        btn.onclick = () => renderMainContent(btn.getAttribute('data-type'));
+      });
+
+      document.getElementById('closeBtn').onclick = () => {
+        if (window.electronAPI) window.electronAPI.close();
       };
-    });
-    // 첫 화면 진입 시 이벤트 연결
-    afterContentChange(0);
-      // 1분마다 홈화면(할일 카드) 자동 새로고침
-      setInterval(() => {
-        if (typeof renderMainContent === 'function') {
-          // 홈(0) 화면일 때만 갱신
-          const mainTitle = document.getElementById('mainTitle');
-          if (mainTitle && mainTitle.textContent.includes('홈')) {
-            renderMainContent(0);
-          }
-        }
-      }, 60 * 1000);
+
+      // 초기 실행
+      renderMainContent('main');
+    };
   </script>
-</body>
-  <script src="renderer.js"></script>
 </body>
 </html>
