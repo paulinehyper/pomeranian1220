@@ -97,33 +97,6 @@ ipcMain.on('open-mail-detail', (event, params) => {
 
 
 // get-todos, get-emails 핸들러는 앱 시작 시 한 번만 등록
-ipcMain.handle('get-todos', () => {
-  // todo_flag=3(완전삭제)는 제외하고 반환
-  const todos = db.prepare('SELECT * FROM todos WHERE todo_flag != 3 ORDER BY id').all();
-  const now = new Date();
-  return todos.map(todo => {
-    let deadline = todo.deadline;
-    let dday = '없음';
-    let date = '없음';
-    if (deadline) {
-      date = deadline.replace(/\//g, '/');
-      const deadlineDate = new Date(date);
-      if (!isNaN(deadlineDate)) {
-        const diff = Math.ceil((deadlineDate - now) / (1000*60*60*24));
-        dday = diff >= 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
-      }
-    }
-    return {
-      id: todo.id,
-      date,
-      dday,
-      task: todo.task,
-      deadline: deadline || '없음',
-      memo: todo.memo || '',
-      todo_flag: todo.todo_flag // 완료 여부 반환
-    };
-  });
-});
 
 ipcMain.handle('get-emails', () => {
   const rows = db.prepare('SELECT * FROM emails ORDER BY id DESC').all();
@@ -351,28 +324,66 @@ ipcMain.handle('insert-keyword', (event, keyword) => {
     return { success: false, error: err.message };
   }
 });
-// Keyword 전체 조회
-ipcMain.handle('get-keywords', () => {
+
+
+// 모든 할일 정보를 가져오는 통합 핸들러 (중복 등록 방지)
+
+
+// 모든 할일 정보를 가져오는 통합 핸들러 (휴지통 기능 추가)
+ipcMain.handle('get-todos', (event, mode) => {
   try {
-    const keywords = db.getAllKeywords();
-    return { success: true, keywords };
+    let todos;
+    
+    if (mode === 'trash') {
+      // 1. 휴지통 모드: todo_flag가 3인 것만 가져옴
+      todos = db.prepare('SELECT * FROM todos WHERE todo_flag = 3 ORDER BY id DESC').all();
+    } else if (mode === true) {
+      // 2. 전체 모드 (설정 등): 삭제되지 않은 모든 것
+      todos = db.prepare('SELECT * FROM todos WHERE todo_flag != 3 ORDER BY id').all();
+    } else {
+      // 3. 메인 화면 모드: 활성화된 할일만 (1: 미완료, 2: 완료)
+      todos = db.prepare('SELECT * FROM todos WHERE todo_flag IN (1, 2) ORDER BY id').all();
+    }
+
+    const now = new Date();
+    return todos.map(todo => {
+      let deadline = todo.deadline;
+      let dday = '없음';
+      let date = '없음';
+
+      if (deadline) {
+        date = deadline.replace(/\//g, '/');
+        const deadlineDate = new Date(date);
+        const today = new Date(); 
+        today.setHours(0,0,0,0);
+        
+        const diffDays = Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
+        if (diffDays === 0) dday = '오늘까지';
+        else if (diffDays > 0) dday = `D-${diffDays}`;
+        else dday = '지남';
+      }
+
+      return {
+        id: todo.id,
+        task: todo.task || todo.content || '제목 없음',
+        memo: todo.memo || '',
+        deadline: deadline || '없음',
+        todo_flag: todo.todo_flag,
+        dday: dday,
+        date: date,
+        unique_hash: todo.unique_hash
+      };
+    });
   } catch (err) {
-    return { success: false, error: err.message };
+    console.error('get-todos 에러:', err);
+    return [];
   }
 });
-// Keyword 수정
-ipcMain.handle('update-keyword', (event, oldKw, newKw) => {
-  try {
-    db.updateKeyword(oldKw, newKw);
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-});
-// Keyword 삭제
+
+// 키워드 삭제 핸들러 (꼬였던 부분 수정)
 ipcMain.handle('delete-keyword', (event, kw) => {
   try {
-    db.deleteKeyword(kw);
+    db.prepare('DELETE FROM keywords WHERE keyword = ?').run(kw);
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };

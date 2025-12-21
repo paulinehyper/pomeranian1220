@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     addTodoFromMail: (mailId) => ipcRenderer.invoke('add-todo-from-mail', mailId),
   minimize: () => ipcRenderer.send('minimize'),
   close: () => ipcRenderer.send('close'),
-  getTodos: () => ipcRenderer.invoke('get-todos'),
+  getTodos: (all) => ipcRenderer.invoke('get-todos', all),
   openSettings: () => ipcRenderer.send('open-settings'),
   openKeyword: () => ipcRenderer.send('open-keyword'),
   getKeywords: () => ipcRenderer.invoke('get-keywords'),

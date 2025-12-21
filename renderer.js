@@ -1,3 +1,4 @@
+// ...renderer.js의 나머지 코드만 유지...
 console.log('renderer.js loaded');
 // 환경설정(톱니바퀴) 아이콘 클릭 시 app-settings.html 새 창 열기
 document.addEventListener('DOMContentLoaded', () => {

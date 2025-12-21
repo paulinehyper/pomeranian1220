@@ -195,7 +195,52 @@
         }
       }
 
-      sidebarBtns.forEach(btn => btn.onclick = () => renderMainContent(btn.getAttribute('data-type')));
+      // 항상 window.renderMainContent를 호출하도록 수정 (확장된 함수가 호출됨)
+      sidebarBtns.forEach(btn => btn.onclick = () => window.renderMainContent(btn.getAttribute('data-type')));
+
+      // trash 페이지 렌더링 함수
+      async function renderTrashPage() {
+        const container = document.querySelector('.widget-home-main');
+        if (!container) return;
+        container.innerHTML = `<div class="todo-list-section"><h2 style="margin-bottom:16px;">휴지통</h2><div class="todo-list" id="trash-list"></div></div>`;
+        // todo_flag=3인 항목만 조회
+        let todos = [];
+        if (window.electronAPI.getTodos) {
+          todos = await window.electronAPI.getTodos('trash'); // 'trash' 모드로 휴지통만 조회
+        }
+        const list = document.getElementById('trash-list');
+        if (todos.length === 0) {
+          list.innerHTML = '<div style="color:#aaa; padding:32px 0; text-align:center;">휴지통이 비어 있습니다.</div>';
+        } else {
+          list.innerHTML = todos.map(t => `
+            <div class="todo-card" style="opacity:0.6; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div class="todo-content">${t.task}</div>
+                <div class="todo-meta">${t.deadline ? `<span class='todo-deadline'>${t.deadline}</span>` : ''}</div>
+              </div>
+              <button class="restore-btn" data-id="${t.id}" style="background:#00b49c; color:white; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-size:0.95em;">복구</button>
+            </div>
+          `).join('');
+          // 복구 버튼 이벤트 바인딩
+          list.querySelectorAll('.restore-btn').forEach(btn => {
+            btn.onclick = async (e) => {
+              const id = btn.getAttribute('data-id');
+              await window.electronAPI.setTodoComplete(Number(id), 1); // todo_flag=1(미완료)로 복구
+              await renderTrashPage(); // 휴지통 새로고침
+            };
+          });
+        }
+      }
+
+      // renderMainContent 확장: trash 처리
+      const origRenderMainContent = window.renderMainContent || renderMainContent;
+      window.renderMainContent = async function(type) {
+        if (type === 'trash') {
+          await renderTrashPage();
+        } else {
+          origRenderMainContent(type);
+        }
+      }
       document.getElementById('closeBtn').onclick = () => window.electronAPI.close();
       renderMainContent('main');
     };
