@@ -325,13 +325,8 @@ ipcMain.handle('set-email-todo-complete', (event, id) => {
 
 // 일반 할일 완료/미완료 상태 저장
 ipcMain.handle('set-todo-complete', (event, id, flag) => {
-  if (flag === 2) {
-    // 완료 처리 시 삭제
-    db.prepare('DELETE FROM todos WHERE id = ?').run(id);
-  } else {
-    // 미완료 처리 시 todo_flag만 변경
-    db.prepare('UPDATE todos SET todo_flag = ? WHERE id = ?').run(flag, id);
-  }
+  // 완료 또는 미완료 모두 todo_flag만 변경
+  db.prepare('UPDATE todos SET todo_flag = ? WHERE id = ?').run(flag, id);
   return { success: true };
 });
 let tray = null;
