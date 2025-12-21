@@ -295,7 +295,13 @@
                   <li class='todo-card' style='position:relative;'>
                     <span style="color:#03af7c;font-weight:normal;margin-right:8px;">${deadlineStr}${ddayStr ? ' (' + ddayStr + ')' : ''}</span>
                     <span>${todo.task || '(제목 없음)'}</span>
-                    <button class="remove-todo-btn" data-id="${todo.id}" title="제외" style="position:absolute;top:10px;right:12px;background:#fff;border:1.5px solid #e0e0e0;color:#ff5a5a;border-radius:50%;width:26px;height:26px;font-size:1.1em;line-height:1;cursor:pointer;box-shadow:0 1px 4px #00b49a11;display:flex;align-items:center;justify-content:center;transition:background 0.15s,border 0.15s;">-</button>
+                    <button class="complete-check-btn" data-id="${todo.id}" title="완료 체크" style="position:absolute;top:10px;right:12px;background:transparent;border:none;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;z-index:10;">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="9" fill="#00b49cff" stroke="#00b49cff" stroke-width="1.5"/>
+                        <path d="M8 12l3 3 5-5" stroke="#fff" stroke-width="2" fill="none"/>
+                      </svg>
+                    </button>
+                    <button class="remove-todo-btn" data-id="${todo.id}" title="제외" style="position:absolute;top:10px;right:44px;background:#fff;border:1.5px solid #e0e0e0;color:#ff5a5a;border-radius:50%;width:26px;height:26px;font-size:1.1em;line-height:1;cursor:pointer;box-shadow:0 1px 4px #00b49a11;display:flex;align-items:center;justify-content:center;transition:background 0.15s,border 0.15s;">-</button>
                   </li>
                 `;
               }).join('');
@@ -304,8 +310,38 @@
                 card.addEventListener('click', function(e) {
                   // 제외 버튼 클릭 시에는 취소선 토글 방지
                   if (e.target.classList.contains('remove-todo-btn')) return;
+                  // 체크 뱃지 클릭 시에는 취소선 토글 방지
+                  if (e.target.classList.contains('complete-check-btn') || e.target.closest('.complete-check-btn')) return;
                   this.classList.toggle('done');
+                  // 취소선이 그어지면 체크 뱃지 표시
+                  const checkBtn = this.querySelector('.complete-check-btn');
+                  if (this.classList.contains('done')) {
+                    if (checkBtn) checkBtn.style.display = 'inline-block';
+                  } else {
+                    if (checkBtn) checkBtn.style.display = 'none';
+                  }
                 });
+                            cardList.querySelectorAll('.complete-check-btn').forEach(btn => {
+                                            cardList.querySelectorAll('.complete-check-btn').forEach(btn => {
+                                              btn.addEventListener('click', async function(e) {
+                                                e.stopPropagation();
+                                                const id = this.dataset.id;
+                                                if (id && window.electronAPI && window.electronAPI.setTodoComplete) {
+                                                  await window.electronAPI.setTodoComplete(Number(id), 2);
+                                                }
+                                                renderMainContent(0);
+                                              });
+                                            });
+                              btn.addEventListener('click', async function(e) {
+                                e.stopPropagation();
+                                const card = this.closest('.todo-card');
+                                const id = card && card.querySelector('.remove-todo-btn') ? card.querySelector('.remove-todo-btn').dataset.id : null;
+                                if (id && window.electronAPI && window.electronAPI.excludeTodo) {
+                                  await window.electronAPI.excludeTodo(Number(id));
+                                }
+                                renderMainContent(0);
+                              });
+                            });
               });
               // 제외 버튼 이벤트
               cardList.querySelectorAll('.remove-todo-btn').forEach(btn => {

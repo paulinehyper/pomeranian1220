@@ -123,59 +123,27 @@ function renderList(todos) {
     const li = document.createElement('li');
     li.setAttribute('draggable', 'true');
     li.setAttribute('data-idx', idx);
-
-    // Drag & Drop 이벤트
-    li.addEventListener('dragstart', (e) => {
-      dragSrcIdx = idx;
-      e.dataTransfer.effectAllowed = 'move';
-      li.classList.add('dragging');
-    });
-    li.addEventListener('dragend', (e) => {
-      li.classList.remove('dragging');
-    });
-    li.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      li.classList.add('drag-over');
-    });
-    li.addEventListener('dragleave', (e) => {
-      li.classList.remove('drag-over');
-    });
-    li.addEventListener('drop', (e) => {
-      e.preventDefault();
-      li.classList.remove('drag-over');
-      if (dragSrcIdx !== null && dragSrcIdx !== idx) {
-        // 순서 변경
-        const newTodos = [...todos];
-        const [moved] = newTodos.splice(dragSrcIdx, 1);
-        newTodos.splice(idx, 0, moved);
-        renderList(newTodos);
-      }
-    });
-    // 연필(편집) 아이콘 및 메모 입력란(초기 숨김)
+    // ...existing code...
     const memo = item.memo || '';
-    // deadline 표시: item.deadline이 있고, date와 다를 때만 보여주기
     let deadlineHtml = '';
     let isUrgent = false;
     if (item.deadline && item.deadline !== '없음' && item.deadline !== item.date) {
       deadlineHtml = `<span class="deadline" style="color:#00b49cff;font-weight:bold;margin-right:6px;">마감: ${item.deadline}</span>`;
-      // 오늘이거나 이미 지난 데드라인이면 긴급
       const today = new Date();
       const deadlineDate = new Date(item.deadline);
       today.setHours(0,0,0,0);
       deadlineDate.setHours(0,0,0,0);
       if (deadlineDate <= today) isUrgent = true;
     }
-    // 완료 상태인지 확인 (이메일 기반만 지원)
     const isMail = typeof item.id === 'string' && item.id.startsWith('mail-');
-    const isCompleted = isMail && item.todo_flag === 2;
+    const isCompleted = item.todo_flag === 2;
     li.innerHTML = `
       ${deadlineHtml}
       <span class="date">${item.date} </span>
       <span style="display:inline-block;width:8px;"></span>
       <span class="d-day">${item.dday}</span>
       <span style="display:inline-block;width:8px;"></span>
-      <span class="task" style="${item.todo_flag === 2 ? 'text-decoration:line-through;color:#aaa;' : ''}">${item.task}</span>
+      <span class="task" style="${isCompleted ? 'text-decoration:line-through;color:#aaa;' : ''}">${item.task}</span>
       <button class="memo-edit-btn" title="메모 추가/수정" style="background:transparent;border:none;cursor:pointer;margin-left:8px;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect x="3" y="3" width="18" height="18" rx="3" fill="#7affcaff" stroke="#00b49cff" stroke-width="1.5"/>
@@ -189,6 +157,12 @@ function renderList(todos) {
         </svg>
       </button>
       <textarea class="memo" placeholder="메모/부연설명" rows="2" style="display:none;">${memo}</textarea>
+      <button class="complete-check-btn" title="완료 체크" style="display:${isCompleted ? 'inline-block' : 'none'};background:transparent;border:none;cursor:pointer;margin-left:4px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="9" fill="#00b49cff" stroke="#00b49cff" stroke-width="1.5"/>
+          <path d="M8 12l3 3 5-5" stroke="#fff" stroke-width="2" fill="none"/>
+        </svg>
+      </button>
     `;
     if (isUrgent) li.classList.add('urgent-blink');
         // 할일 제목 클릭 시 취소선 토글
@@ -197,37 +171,53 @@ function renderList(todos) {
           taskSpan.addEventListener('click', async (e) => {
             console.log('taskSpan 클릭됨', item);
             let isNowCompleted = false;
+            const checkBtn = li.querySelector('.complete-check-btn');
             if (taskSpan.style.textDecoration === 'line-through') {
+              // 취소선 해제: 미완료로 변경 (todo_flag=1)
               taskSpan.style.textDecoration = '';
               taskSpan.style.color = '';
               isNowCompleted = false;
-              // DB에 미완료로 변경 (todo_flag=1)
+              if (checkBtn) checkBtn.style.display = 'none';
               if (typeof item.id === 'string' && item.id.startsWith('mail-')) {
                 await window.electronAPI.setEmailTodoFlag(item.id.replace('mail-', ''), 1);
               } else {
                 if (window.electronAPI.setTodoComplete) {
-                  console.log('[setTodoComplete 호출] id:', item.id, 'flag: 1');
                   await window.electronAPI.setTodoComplete(item.id, 1);
-                } else {
-                  console.warn('[setTodoComplete 미정의] id:', item.id, 'flag: 1');
                 }
               }
             } else {
+              // 취소선 표시: 완료로 변경 (todo_flag=2)
               taskSpan.style.textDecoration = 'line-through';
               taskSpan.style.color = '#aaa';
               isNowCompleted = true;
-              // DB에 완료로 변경 (todo_flag=2)
+              if (checkBtn) checkBtn.style.display = 'inline-block';
               if (typeof item.id === 'string' && item.id.startsWith('mail-')) {
                 await window.electronAPI.setEmailTodoComplete(item.id.replace('mail-', ''));
               } else {
                 if (window.electronAPI.setTodoComplete) {
-                  console.log('[setTodoComplete 호출] id:', item.id, 'flag: 2');
                   await window.electronAPI.setTodoComplete(item.id, 2);
-                } else {
-                  console.warn('[setTodoComplete 미정의] id:', item.id, 'flag: 2');
                 }
               }
             }
+          });
+          // 체크 뱃지 클릭 시 DB에서 삭제 및 목록 새로고침
+          const checkBtn = li.querySelector('.complete-check-btn');
+          if (checkBtn) {
+            checkBtn.addEventListener('click', async () => {
+              if (typeof item.id === 'string' && item.id.startsWith('mail-')) {
+                await window.electronAPI.setEmailTodoFlag(item.id.replace('mail-', ''), 0);
+              } else {
+                if (window.electronAPI.excludeTodo) {
+                  await window.electronAPI.excludeTodo(item.id);
+                }
+              }
+              const todos = await fetchTodos();
+              renderList(todos);
+              if (window.electronAPI.openEmails) {
+                window.electronAPI.openEmails();
+              }
+            });
+          }
             // 뱃지 숫자 갱신 (완료시 -1, 취소시 +1)
             const badge = document.getElementById('todo-count-badge');
             if (badge) {

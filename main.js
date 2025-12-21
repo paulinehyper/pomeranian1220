@@ -319,13 +319,19 @@ ipcMain.handle('insert-todo', (event, { task, deadline, memo }) => {
 });
 // 이메일 todo 완료 처리 (todo_flag=2)
 ipcMain.handle('set-email-todo-complete', (event, id) => {
-  db.prepare('UPDATE emails SET todo_flag = 2 WHERE id = ?').run(id);
+  db.prepare('UPDATE emails SET todo_flag = 0 WHERE id = ?').run(id);
   return { success: true };
 });
 
 // 일반 할일 완료/미완료 상태 저장
 ipcMain.handle('set-todo-complete', (event, id, flag) => {
-  db.prepare('UPDATE todos SET todo_flag = ? WHERE id = ?').run(flag, id);
+  if (flag === 2) {
+    // 완료 처리 시 삭제
+    db.prepare('DELETE FROM todos WHERE id = ?').run(id);
+  } else {
+    // 미완료 처리 시 todo_flag만 변경
+    db.prepare('UPDATE todos SET todo_flag = ? WHERE id = ?').run(flag, id);
+  }
   return { success: true };
 });
 let tray = null;
