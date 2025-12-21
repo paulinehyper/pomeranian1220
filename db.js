@@ -17,6 +17,11 @@ console.log('DB 경로:', dbPath);
 
 const db = new Database(dbPath);
 
+// 기존 keyword 테이블이 있으면 삭제 (마이그레이션)
+try {
+  db.exec('DROP TABLE IF EXISTS keyword');
+} catch (e) {}
+
 // emails 테이블에 created_at 컬럼이 없으면 추가 (마이그레이션)
 const emailsPragma = db.prepare("PRAGMA table_info(emails)").all();
 const emailsHasCreatedAt = emailsPragma.some(col => col.name === 'created_at');
@@ -73,29 +78,28 @@ CREATE TABLE IF NOT EXISTS mail_settings (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS keyword (
+
+CREATE TABLE IF NOT EXISTS keywords (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  keyword TEXT NOT NULL UNIQUE,
+  word TEXT NOT NULL UNIQUE,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 `);
 
+
 // Keyword 전체 조회 함수
-// Keyword 저장 함수
-db.insertKeyword = function(keyword) {
-  return db.prepare('INSERT OR IGNORE INTO keyword (keyword) VALUES (?)').run(keyword);
+db.insertKeyword = function(word) {
+  return db.prepare('INSERT OR IGNORE INTO keywords (word) VALUES (?)').run(word);
 };
 db.getAllKeywords = function() {
-  return db.prepare('SELECT keyword FROM keyword ORDER BY id DESC').all().map(row => row.keyword);
+  return db.prepare('SELECT word FROM keywords ORDER BY id DESC').all().map(row => row.word);
 };
-// Keyword 수정 함수
 db.updateKeyword = function(oldKw, newKw) {
-  return db.prepare('UPDATE keyword SET keyword = ? WHERE keyword = ?').run(newKw, oldKw);
+  return db.prepare('UPDATE keywords SET word = ? WHERE word = ?').run(newKw, oldKw);
 };
-// Keyword 삭제 함수
 db.deleteKeyword = function(kw) {
-  return db.prepare('DELETE FROM keyword WHERE keyword = ?').run(kw);
+  return db.prepare('DELETE FROM keywords WHERE word = ?').run(kw);
 };
 
 // todos 테이블에 할일을 저장하는 함수 (deadline, mail_flag 컬럼 포함)

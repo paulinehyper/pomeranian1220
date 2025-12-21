@@ -1,719 +1,194 @@
-// (비활성화) 1분마다 emails 테이블에서 todo_flag=1인 메일을 todos 테이블에 실시간으로 추가
-// setInterval(() => {
-//   try {
-//     const emails = db.prepare('SELECT * FROM emails WHERE todo_flag = 1').all();
-//     const { BrowserWindow } = require('electron');
-//     let newTodoAdded = false;
-//     for (const mail of emails) {
-//       // unique_hash 생성
-//       const crypto = require('crypto');
-//       const hash = crypto.createHash('sha256').update((mail.subject||'')+(mail.body||'')+(mail.from_addr||'')+(mail.deadline||'')).digest('hex');
-//       const exists = db.prepare('SELECT COUNT(*) as cnt FROM todos WHERE unique_hash = ?').get(hash);
-//       if (exists.cnt === 0) {
-//         const now = new Date();
-//         const pad = n => n.toString().padStart(2, '0');
-//         const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-//         db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag, unique_hash, mail_flag) VALUES (?, ?, ?, ?, ?, 1, ?, ?)')
-//           .run(dateStr, '', mail.subject, mail.body || '', mail.deadline || '', hash, 'Y');
-//         newTodoAdded = true;
-//       }
-//     }
-//     // 새 할일이 추가된 경우 renderer에 신호 전송
-//     if (newTodoAdded) {
-//       const win = BrowserWindow.getAllWindows()[0];
-//       if (win) win.webContents.send('new-todo-added');
-//     }
-//   } catch (e) {
-//     console.error('메일→할일 실시간 동기화 오류:', e);
-//   }
-// }, 60 * 1000);
-const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, dialog } = require('electron');
 const path = require('path');
+const crypto = require('crypto');
+const fs = require('fs');
 const autoLauncher = require('./auto-launch');
 const db = require('./db');
 const { addTodosFromEmailTodos } = require('./email_todo_flag');
 
-// 이메일 id를 받아 해당 메일을 todo로 분류하는 IPC
-ipcMain.handle('add-todo-from-mail', (event, mailId) => {
-  // (비활성화) 이메일을 todo로 분류하는 기능
-  return { success: false, error: '이메일에서 todo로 분류 기능이 비활성화됨' };
-});
-
-// ...require 구문들...
-// 네트워크 에러(ECONNRESET) 발생 시 사용자 친화적 메시지 표시
-const { dialog } = require('electron');
-process.on('uncaughtException', (err) => {
-  if (err && (err.code === 'ECONNRESET' || (err.message && err.message.includes('ECONNRESET')))) {
-    // 인터넷 연결 불안정 안내만 표시, 자바 에러 메시지는 숨김
-    dialog.showMessageBox({
-      type: 'warning',
-      title: '네트워크 오류',
-      message: '자체적으로 인터넷연결이 불안정합니다.'
-    });
-    return;
-  }
-  // 그 외 에러는 기존 동작(로깅 등) 유지
-  // console.error(err);
-});
-// ...existing code...
-
-// ...existing code...
-// ...existing code...
-// ...중복 require 제거, 아래에서 한 번만 선언...
-// ...중복 require 제거, 아래에서 한 번만 선언...
-// ...중복 require 제거, 아래에서 한 번만 선언...
-// 아래 require들은 Electron 객체 선언 이후에 위치해야 안전
-// ...중복 require 제거, 아래에서 한 번만 선언...
-// ...중복 require 제거, 아래에서 한 번만 선언...
-// ...중복 require 제거, 아래에서 한 번만 선언...
-// ...중복 require 제거, 아래에서 한 번만 선언...
-// ...중복 require 제거, 아래에서 한 번만 선언...
-// 아래 require들은 Electron 객체 선언 이후에 위치해야 안전
-// ...중복 require 제거, 아래에서 한 번만 선언...
-// ...중복 require 제거, 아래에서 한 번만 선언...
-
-// 메일 상세보기 창을 mainWindow 오른쪽에 띄우는 IPC 핸들러
-ipcMain.on('open-mail-detail', (event, params) => {
-  if (!mainWindow) return;
-  const bounds = mainWindow.getBounds();
-  const detailWindow = new BrowserWindow({
-    width: 700,
-    height: 600,
-    x: bounds.x + 10,
-    y: bounds.y,
-    frame: false,
-    resizable: true,
-    movable: true,
-    alwaysOnTop: true,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  });
-  detailWindow.loadURL(`file://${__dirname}/mail-detail.html?${params}`);
-  detailWindow.on('closed', () => {});
-});
-
-
-// get-todos, get-emails 핸들러는 앱 시작 시 한 번만 등록
-
-ipcMain.handle('get-emails', () => {
-  const rows = db.prepare('SELECT * FROM emails ORDER BY id DESC').all();
-  return rows;
-});
-
-// 새로고침 시 이메일 todo를 todos에 추가
-ipcMain.handle('refresh-todos-from-emails', () => {
-  try {
-    addTodosFromEmailTodos();
-    return { success: true };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-});
-
-// 전체 할일 삭제
-ipcMain.handle('delete-all-todos', () => {
-  db.prepare('DELETE FROM todos').run();
-  return { success: true };
-});
-
-// 환경설정(app-settings.html) 창 열기
-let appSettingsWindow = null;
-ipcMain.on('open-app-settings', () => {
-  if (appSettingsWindow && !appSettingsWindow.isDestroyed()) {
-    appSettingsWindow.focus();
-    return;
-  }
-  appSettingsWindow = new BrowserWindow({
-    width: 600,
-    height: 400,
-    resizable: false,
-    minimizable: false,
-    maximizable: false,
-    alwaysOnTop: true,
-    frame: false, // 커스텀 프레임 적용
-    title: '환경설정',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  });
-  appSettingsWindow.loadFile('app-settings.html');
-  appSettingsWindow.on('closed', () => { appSettingsWindow = null; });
-});
-
-ipcMain.handle('get-auto-launch', async () => {
-  try {
-    const row = db.prepare('SELECT enabled FROM autoplay WHERE id=1').get();
-    return !!(row && row.enabled);
-  } catch (e) {
-    return false;
-  }
-});
-ipcMain.handle('set-auto-launch', async (event, enable) => {
-  try {
-    db.prepare('UPDATE autoplay SET enabled=? WHERE id=1').run(enable ? 1 : 0);
-    if (enable) {
-      await autoLauncher.enable();
-    } else {
-      await autoLauncher.disable();
-    }
-    return true;
-  } catch (e) {
-    return false;
-  }
-});
-
-// 배포용: mail_settings 초기화 (mail_id, mail_pw, mail_since 비움) 및 자동실행 등록
-app.once('ready', async () => {
-  // 이메일 todo를 todos에 자동 추가
-  try {
-    addTodosFromEmailTodos();
-  } catch (e) {
-    console.error('이메일 todo를 todos에 추가하는 중 오류:', e);
-  }
-  try {
-    // mail_settings 테이블이 비어있을 때만 기본값 삽입
-    const count = db.prepare('SELECT COUNT(*) as cnt FROM mail_settings').get().cnt;
-    if (count === 0) {
-      db.prepare('INSERT INTO mail_settings (mail_type, protocol, mail_id, mail_pw, mail_since, mail_server) VALUES (?, ?, ?, ?, ?, ?)')
-        .run('naver', 'imap-ssl', '', '', '', '');
-    }
-  } catch (e) {
-    // 무시
-  }
-  // 자동실행 등록 (윈도우/맥 모두 지원)
-  try {
-    if (!(await autoLauncher.isEnabled())) {
-      await autoLauncher.enable();
-    }
-  } catch (e) {
-    // 무시 (권한 문제 등)
-  }
-});
-
-// 할일 제외(숨김) 처리: todo_flag=0
-ipcMain.handle('exclude-todo', (event, id) => {
-  db.prepare('UPDATE todos SET todo_flag=0 WHERE id=?').run(id);
-  // 학습데이터에서 해당 할일(메일 기반일 경우 subject+body 포함된 줄)도 삭제 및 negative 샘플로 저장
-  try {
-    // todos에서 unique_hash가 있으면 메일 기반임
-    const todo = db.prepare('SELECT * FROM todos WHERE id=?').get(id);
-    let negativeSample = '';
-    let mail = null;
-    if (todo && todo.unique_hash) {
-      // emails에서 subject/body 찾기 (unique_hash 우선)
-      mail = db.prepare('SELECT subject, body, id FROM emails WHERE unique_hash=?').get(todo.unique_hash);
-      // 메일 기반 할일이면 emails 테이블의 todo_flag도 0으로 변경
-      if (mail && mail.id) {
-        db.prepare('UPDATE emails SET todo_flag=0 WHERE id=?').run(mail.id);
-      }
-    }
-    // unique_hash가 없거나 일치하는 메일이 없으면 subject/body로 emails.todo_flag=0 처리
-    if ((!mail || !mail.id) && todo) {
-      const candidates = db.prepare('SELECT id FROM emails WHERE subject=? AND (body=? OR ? IS NULL OR body IS NULL)').all(todo.task, todo.memo, todo.memo);
-      for (const cand of candidates) {
-        db.prepare('UPDATE emails SET todo_flag=0 WHERE id=?').run(cand.id);
-      }
-    }
-    // negative 샘플 저장 및 학습데이터에서 제거
-    if (mail) {
-      const fs = require('fs');
-      const lines = fs.readFileSync('todo_train_data.txt', 'utf-8').split('\n');
-      const filtered = lines.filter(line => {
-        // subject 또는 body가 포함된 줄은 제외
-        return !(line.includes(mail.subject) || line.includes(mail.body));
-      });
-      fs.writeFileSync('todo_train_data.txt', filtered.join('\n'));
-      negativeSample = `__NEG__ ${mail.subject} ${mail.body || ''}`.trim();
-    } else if (todo) {
-      // 일반 할일도 negative 샘플로 저장
-      negativeSample = `__NEG__ ${todo.task} ${todo.memo || ''}`.trim();
-    }
-    if (negativeSample) {
-      const fs = require('fs');
-      fs.appendFileSync('todo_train_data.txt', `\n${negativeSample}`);
-    }
-  } catch (e) { /* 무시 */ }
-  return { success: true };
-});
-
-// OS별 아이콘 경로 분기
-const iconPath =
-  process.platform === 'darwin'
-    ? path.join(__dirname, 'assets', 'icon.png')   // mac
-    : path.join(__dirname, 'icon.ico');            // win
-const winIcon = iconPath;
-
-// 사용자 직접 할일 추가
-ipcMain.handle('insert-todo', (event, { task, deadline, memo }) => {
-  try {
-    // date: 현재 날짜/시간, dday: 마감일 있으면 계산, 없으면 '없음'
-    const now = new Date();
-    const pad = n => n.toString().padStart(2, '0');
-    const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-    let dday = '없음';
-    if (deadline) {
-      const deadlineDate = new Date(deadline);
-      if (!isNaN(deadlineDate)) {
-        const diff = Math.ceil((deadlineDate - now) / (1000*60*60*24));
-        dday = diff >= 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
-      }
-    }
-    db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag, unique_hash) VALUES (?, ?, ?, ?, ?, 1, ?)')
-      .run(dateStr, dday, task, memo || '', deadline || '', null);
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-});
-// 이메일 todo 완료 처리 (todo_flag=2)
-ipcMain.handle('set-email-todo-complete', (event, id) => {
-  db.prepare('UPDATE emails SET todo_flag = 0 WHERE id = ?').run(id);
-  return { success: true };
-});
-
-// 일반 할일 완료/미완료 상태 저장
-ipcMain.handle('set-todo-complete', (event, id, flag) => {
-  // 완료 또는 미완료 모두 todo_flag만 변경
-  db.prepare('UPDATE todos SET todo_flag = ? WHERE id = ?').run(flag, id);
-  return { success: true };
-});
-let tray = null;
-const setupMailIpc = require('./mail');
 let mainWindow = null;
-let settingsWindow = null;
+let appSettingsWindow = null;
 let emailsWindow = null;
 let keywordWindow = null;
+let tray = null;
+let syncMailInterval = null;
 
-// Keyword 창 열기
-ipcMain.on('open-keyword', () => {
-  if (keywordWindow && !keywordWindow.isDestroyed()) {
-    keywordWindow.focus();
-    return;
-  }
-  keywordWindow = new BrowserWindow({
-    width: 420,
-    height: 340,
-    resizable: false,
-    alwaysOnTop: true,
-    frame: false, // 커스텀 프레임
-    icon: winIcon,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
+// OS별 아이콘 경로 설정
+const iconPath = process.platform === 'darwin'
+  ? path.join(__dirname, 'assets', 'icon.png')
+  : path.join(__dirname, 'icon.ico');
+const winIcon = iconPath;
+
+// --- 유틸리티 함수 ---
+const extractDeadline = (body) => {
+  if (!body) return null;
+  const patterns = [
+    /(\d{4})[./-](\d{1,2})[./-](\d{1,2})/,
+    /(\d{1,2})[./-](\d{1,2})/,
+    /(\d{1,2})월\s?(\d{1,2})일/,
+    /(\d{1,2})일/,
+    /(\d{1,2})일까지/
+  ];
+  for (const re of patterns) {
+    const m = body.match(re);
+    if (m) {
+      if (m.length >= 4 && m[1].length === 4) return `${m[1]}/${m[2].padStart(2, '0')}/${m[3].padStart(2, '0')}`;
+      return `${new Date().getFullYear()}/${(m[1] || '').padStart(2, '0')}/${(m[2] || '01').padStart(2, '0')}`;
     }
-  });
-  keywordWindow.loadFile('keyword.html');
-  keywordWindow.on('closed', () => { keywordWindow = null; });
-});
-
-// Keyword 저장
-ipcMain.handle('insert-keyword', (event, keyword) => {
-  try {
-    db.insertKeyword(keyword);
-    // 키워드가 포함된 메일 제목을 todo_flag=1로 분류
-    const stmt = db.prepare('UPDATE emails SET todo_flag=1 WHERE subject LIKE ?');
-    stmt.run(`%${keyword}%`);
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err.message };
   }
-});
+  return null;
+};
 
+// --- IPC 핸들러 등록 ---
 
-// 모든 할일 정보를 가져오는 통합 핸들러 (중복 등록 방지)
-
-
-// 모든 할일 정보를 가져오는 통합 핸들러 (휴지통 기능 추가)
+// 1. 할일 관련
 ipcMain.handle('get-todos', (event, mode) => {
   try {
     let todos;
-    
     if (mode === 'trash') {
-      // 1. 휴지통 모드: todo_flag가 3인 것만 가져옴
       todos = db.prepare('SELECT * FROM todos WHERE todo_flag = 3 ORDER BY id DESC').all();
-    } else if (mode === true) {
-      // 2. 전체 모드 (설정 등): 삭제되지 않은 모든 것
-      todos = db.prepare('SELECT * FROM todos WHERE todo_flag != 3 ORDER BY id').all();
     } else {
-      // 3. 메인 화면 모드: 활성화된 할일만 (1: 미완료, 2: 완료)
       todos = db.prepare('SELECT * FROM todos WHERE todo_flag IN (1, 2) ORDER BY id').all();
     }
-
-    const now = new Date();
-    return todos.map(todo => {
-      let deadline = todo.deadline;
-      let dday = '없음';
-      let date = '없음';
-
-      if (deadline) {
-        date = deadline.replace(/\//g, '/');
-        const deadlineDate = new Date(date);
-        const today = new Date(); 
-        today.setHours(0,0,0,0);
-        
-        const diffDays = Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
-        if (diffDays === 0) dday = '오늘까지';
-        else if (diffDays > 0) dday = `D-${diffDays}`;
-        else dday = '지남';
-      }
-
-      return {
-        id: todo.id,
-        task: todo.task || todo.content || '제목 없음',
-        memo: todo.memo || '',
-        deadline: deadline || '없음',
-        todo_flag: todo.todo_flag,
-        dday: dday,
-        date: date,
-        unique_hash: todo.unique_hash
-      };
-    });
+    return todos.map(t => ({
+      id: t.id,
+      task: t.task || t.content || '제목 없음',
+      memo: t.memo || '',
+      deadline: t.deadline || '없음',
+      todo_flag: t.todo_flag
+    }));
   } catch (err) {
-    console.error('get-todos 에러:', err);
     return [];
   }
 });
 
-// 키워드 삭제 핸들러 (꼬였던 부분 수정)
-ipcMain.handle('delete-keyword', (event, kw) => {
+ipcMain.handle('insert-todo', (event, { task, deadline, memo }) => {
   try {
-    db.prepare('DELETE FROM keywords WHERE keyword = ?').run(kw);
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 19).replace('T', ' ');
+    db.prepare('INSERT INTO todos (date, task, memo, deadline, todo_flag) VALUES (?, ?, ?, ?, 1)')
+      .run(dateStr, task, memo || '', deadline || '');
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle('save-memo', (event, id, memo) => {
-  // id가 'mail-123' 형태면 emails, 아니면 todos
-  if (typeof id === 'string' && id.startsWith('mail-')) {
-    const mailId = id.replace('mail-', '');
-    db.prepare('UPDATE emails SET memo = ? WHERE id = ?').run(memo, mailId);
-  } else {
-    db.prepare('UPDATE todos SET memo = ? WHERE id = ?').run(memo, id);
-  }
+ipcMain.handle('set-todo-complete', (event, id, flag) => {
+  db.prepare('UPDATE todos SET todo_flag = ? WHERE id = ?').run(flag, id);
   return { success: true };
+});
+
+ipcMain.handle('exclude-todo', (event, id) => {
+  db.prepare('UPDATE todos SET todo_flag = 0 WHERE id = ?').run(id);
+  return { success: true };
+});
+
+// 2. 키워드 관련 (중복 제거 및 통합)
+ipcMain.handle('get-keywords', async () => {
+  return db.prepare("SELECT id, word FROM keywords").all();
+});
+
+ipcMain.handle('insert-keyword', (event, keyword) => {
+  try {
+    db.prepare('INSERT INTO keywords (word) VALUES (?)').run(keyword);
+    // 키워드가 포함된 메일을 자동으로 할일(todo_flag=1)로 변경
+    db.prepare('UPDATE emails SET todo_flag = 1 WHERE subject LIKE ?').run(`%${keyword}%`);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('delete-keyword', (event, id) => {
+  try {
+    db.prepare('DELETE FROM keywords WHERE id = ?').run(id);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 3. 이메일 및 설정 관련
+ipcMain.handle('get-emails', () => {
+  return db.prepare('SELECT * FROM emails ORDER BY id DESC').all();
 });
 
 ipcMain.handle('save-mail-settings', (event, settings) => {
-  // mail_settings 테이블에 항상 1개만 저장 (id=1)
-  const stmt = db.prepare(`INSERT INTO mail_settings (id, protocol, mail_id, mail_pw, host, port, mail_since) VALUES (1, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET protocol=excluded.protocol, mail_id=excluded.mail_id, mail_pw=excluded.mail_pw, host=excluded.host, port=excluded.port, mail_since=excluded.mail_since`);
-  stmt.run(
-    settings.protocol || '',
-    settings.mailId || '',
-    settings.mailPw || '',
-    settings.host || '',
-    settings.port || '',
-    settings.mailSince || ''
-  );
-  // 저장 후 바로 메일 연동 실행
-  setTimeout(() => {
-    if (typeof syncMail === 'function') syncMail();
-  }, 100);
-  return { success: true };
-});
-
-ipcMain.handle('get-mail-settings', () => {
-  const row = db.prepare('SELECT * FROM mail_settings WHERE id=1').get();
-  if (!row) return null;
-  // key 변환: mail_id → mailId, mail_pw → mailPw, mail_since → mailSince
-  return {
-    protocol: row.protocol,
-    port: row.port,
-    host: row.host,
-    mailId: row.mail_id,
-    mailPw: row.mail_pw,
-    mailSince: row.mail_since
-  };
-});
-
-ipcMain.handle('set-email-todo-flag', (event, id, flag) => {
-  db.prepare('UPDATE emails SET todo_flag = ? WHERE id = ?').run(flag, id);
-  const mail = db.prepare('SELECT subject, body, deadline, from_addr FROM emails WHERE id = ?').get(id);
-  if (flag == 1) {
-    // 메일 본문+제목을 positive(할일) 샘플로 저장 및 todos에 insert
-    if (mail) {
-      // 중복 방지: subject+body+from_addr+deadline 해시
-      const crypto = require('crypto');
-      const hash = crypto.createHash('sha256').update((mail.subject||'')+(mail.body||'')+(mail.from_addr||'')+(mail.deadline||'')).digest('hex');
-      const exists = db.prepare('SELECT COUNT(*) as cnt FROM todos WHERE unique_hash = ?').get(hash);
-      if (exists.cnt === 0) {
-        db.prepare('INSERT INTO todos (task, memo, deadline, unique_hash) VALUES (?, ?, ?, ?)').run(mail.subject, '', mail.deadline, hash);
-      }
-      // 학습 데이터 저장
-      const fs = require('fs');
-      const line = `1\t${(mail.subject || '').replace(/\t/g,' ')} ${(mail.body || '').replace(/\t/g,' ')}\n`;
-      fs.appendFileSync('todo_train_data.txt', line);
-    }
-  } else if (flag == 0 && mail) {
-    // unique_hash 계산 후 해당 메일 기반 todos 삭제
-    const crypto = require('crypto');
-    const hash = crypto.createHash('sha256').update((mail.subject||'')+(mail.body||'')+(mail.from_addr||'')+(mail.deadline||'')).digest('hex');
-    db.prepare('DELETE FROM todos WHERE unique_hash = ?').run(hash);
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO mail_settings (id, protocol, mail_id, mail_pw, host, port, mail_since) 
+      VALUES (1, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET 
+        protocol=excluded.protocol, mail_id=excluded.mail_id, mail_pw=excluded.mail_pw, 
+        host=excluded.host, port=excluded.port, mail_since=excluded.mail_since
+    `);
+    stmt.run(settings.protocol, settings.mailId, settings.mailPw, settings.host, settings.port, settings.mailSince);
+    setTimeout(() => syncMail(), 1000);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
-  return { success: true };
 });
 
-ipcMain.on('open-emails', () => {
-  if (emailsWindow && !emailsWindow.isDestroyed()) {
-    emailsWindow.focus();
-    return;
-  }
-  emailsWindow = new BrowserWindow({
-    width: 700,
-    height: 500,
-    resizable: true,
-    minimizable: true,
-    maximizable: true,
-    icon: winIcon,
-    alwaysOnTop: true,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    }
+// 4. 창 제어 관련
+ipcMain.on('open-mail-detail', (event, params) => {
+  if (!mainWindow) return;
+  const detailWindow = new BrowserWindow({
+    width: 700, height: 600, frame: false, alwaysOnTop: true,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
   });
-  emailsWindow.loadFile('emails.html');
-  emailsWindow.setAlwaysOnTop(true);
-  emailsWindow.on('closed', () => { emailsWindow = null; });
+  detailWindow.loadURL(`file://${__dirname}/mail-detail.html?${params}`);
 });
+
+ipcMain.on('close', () => mainWindow.close());
+ipcMain.on('minimize', () => mainWindow.minimize());
+
+// --- 메인 함수 및 동기화 로직 ---
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1500, // 기존 900에서 넓게 조정
-    minWidth: 1000, // 최소 넓이도 넓게 조정
-    height: 700,
-    alwaysOnTop: true,
-    frame: false,
-    resizable: true,
-    transparent: true,
-    icon: winIcon,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    }
+    width: 1200, height: 800, frame: false, transparent: true, alwaysOnTop: true,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
   });
   mainWindow.loadFile('main.html');
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
-
-  // 트레이 아이콘 클릭 시 창 토글
-  if (tray) {
-    tray.on('click', () => {
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
-        mainWindow.show();
-      }
-    });
-  }
-
-  ipcMain.on('minimize', () => {
-    mainWindow.minimize();
-  });
-  ipcMain.on('close', () => {
-    mainWindow.close();
-  });
-
-  const extractDeadline = (body) => {
-    if (!body) return null;
-    // YYYY-MM-DD, YYYY/MM/DD, MM/DD, MM월DD일, 12일까지, 12일, 12/30 등 다양한 날짜 패턴
-    const patterns = [
-      /(\d{4})[./-](\d{1,2})[./-](\d{1,2})/, // 2025-12-30
-      /(\d{1,2})[./-](\d{1,2})/, // 12-30
-      /(\d{1,2})월\s?(\d{1,2})일/, // 12월 30일
-      /(\d{1,2})일/, // 30일
-      /(\d{1,2})일까지/ // 30일까지
-    ];
-    for (const re of patterns) {
-      const m = body.match(re);
-      if (m) {
-        if (m.length >= 4 && m[1].length === 4) {
-          // YYYY-MM-DD
-          return `${m[1]}/${m[2].padStart(2,'0')}/${m[3].padStart(2,'0')}`;
-        } else if (m.length >= 3 && re === patterns[1]) {
-          // MM/DD
-          return `${new Date().getFullYear()}/${m[1].padStart(2,'0')}/${m[2].padStart(2,'0')}`;
-        } else if (m.length >= 3 && re === patterns[2]) {
-          // MM월 DD일
-          return `${new Date().getFullYear()}/${m[1].padStart(2,'0')}/${m[2].padStart(2,'0')}`;
-        } else if (m.length >= 2 && (re === patterns[3] || re === patterns[4])) {
-          // DD일, DD일까지
-          return `${new Date().getFullYear()}/${(new Date().getMonth()+1).toString().padStart(2,'0')}/${m[1].padStart(2,'0')}`;
-        }
-      }
-    }
-    // YYYY년 MM월 DD일 패턴 우선 적용
-    const yearMonthDay = body.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
-    if (yearMonthDay) {
-      return `${yearMonthDay[1]}/${yearMonthDay[2].padStart(2,'0')}/${yearMonthDay[3].padStart(2,'0')}`;
-    }
-    return null;
-  };
-
-
-
-  ipcMain.on('open-settings', () => {
-    if (settingsWindow && !settingsWindow.isDestroyed()) {
-      settingsWindow.focus();
-      return;
-    }
-      settingsWindow = new BrowserWindow({
-        width: 800,
-        height: 480,
-        resizable: false,
-        alwaysOnTop: true,
-        frame: false, // 프레임리스
-        transparent: true, // 투명 배경
-        icon: winIcon,
-        webPreferences: {
-          preload: path.join(__dirname, 'preload.js'),
-          contextIsolation: true,
-          nodeIntegration: false
-        }
-      });
-    settingsWindow.loadFile('settings.html');
-    settingsWindow.on('closed', () => { settingsWindow = null; });
-  });
 }
 
+async function syncMail() {
+  const row = db.prepare('SELECT * FROM mail_settings WHERE id=1').get();
+  if (row && row.mail_id && row.mail_pw) {
+    const mailModule = require('./mail');
+    if (typeof mailModule.syncMail === 'function') {
+      await mailModule.syncMail(row);
+      if (mainWindow) mainWindow.webContents.send('mail-sync-complete');
+    }
+  }
+}
 
 app.whenReady().then(() => {
-    // 트레이 아이콘 생성
-    tray = new Tray(iconPath);
-    tray.setToolTip('할일 위젯');
-    tray.setContextMenu(Menu.buildFromTemplate([
-      { label: '열기', click: () => {
-          if (!mainWindow || mainWindow.isDestroyed()) {
-            createWindow();
-          } else {
-            mainWindow.show();
-          }
-        }
-      },
-      { label: '종료', click: () => { app.quit(); } }
-    ]));
-
-    // 1분마다 emails 테이블에서 todo_flag가 NULL인 메일을 분석하여 todo_flag 업데이트
-    const analyzeTodos = async () => {
-      // const db = require('./db');
-      const ort = require('onnxruntime-node');
-      let session = null;
-      async function loadModel() {
-        if (!session) session = await ort.InferenceSession.create('todo_classifier.onnx');
-      }
-      // 마감일 패턴(몇일까지 제출 등)
-      const deadlinePatterns = [
-        /(\d{1,2})월\s?(\d{1,2})일.*제출/, /(\d{1,2})일까지.*제출/, /(\d{1,2})일.*제출/, /by\s+(\d{1,2})[./-](\d{1,2})/i, /submit.*by.*(\d{1,2})[./-](\d{1,2})/i
-      ];
-      // 주요 할일 키워드 (제목/본문에 포함되면 무조건 todo_flag=1)
-      const todoKeywords = ['검토요망', '확인', '제출', '기한', '마감', '요청'];
-      const adKeywords = ['instagram', 'facebook', '온라인투어', 'onlinetour', '페이스북', '인스타그램'];
-      const emails = db.prepare('SELECT * FROM emails WHERE todo_flag IS NULL').all();
-      for (const mail of emails) {
-        const text = ((mail.subject || '') + ' ' + (mail.body || '')).toLowerCase();
-        const from = (mail.from_addr || '').toLowerCase();
-        // 광고성 메일 제외
-        const isAdMail = adKeywords.some(kw => from.includes(kw) || text.includes(kw));
-        let todoFlag = 0;
-        // [개선] 주요 키워드 포함시 무조건 todo_flag=1
-        const hasTodoKeyword = todoKeywords.some(kw => text.includes(kw.toLowerCase()));
-        if (!isAdMail) {
-          if (hasTodoKeyword) {
-            todoFlag = 1;
-          } else {
-            const hasDeadline = deadlinePatterns.some(re => text.match(re));
-            if (hasDeadline) {
-              try {
-                await loadModel();
-                const inputTensor = new ort.Tensor('string', [text], [1]);
-                const feeds = { input: inputTensor };
-                const results = await session.run(feeds);
-                const score = results.output.data[0];
-                todoFlag = score > 0.8 ? 1 : 0;
-              } catch (err) {
-                todoFlag = 1;
-              }
-            }
-          }
-        }
-        db.prepare('UPDATE emails SET todo_flag = ? WHERE id = ?').run(todoFlag, mail.id);
-        // todo_flag=1이면 todos에 insert (중복 방지)
-        if (todoFlag === 1) {
-          const crypto = require('crypto');
-          const hash = crypto.createHash('sha256').update((mail.subject||'')+(mail.body||'')+(mail.from_addr||'')+(mail.deadline||'')).digest('hex');
-          const exists = db.prepare('SELECT COUNT(*) as cnt FROM todos WHERE unique_hash = ?').get(hash);
-          if (exists.cnt === 0) {
-            db.prepare('INSERT INTO todos (task, memo, deadline, unique_hash) VALUES (?, ?, ?, ?)').run(mail.subject, '', mail.deadline, hash);
-          }
-        }
-      }
-    };
-    setInterval(analyzeTodos, 60 * 1000);
-    analyzeTodos();
   createWindow();
-  setupMailIpc();
+  
+  // 트레이 설정
+  tray = new Tray(iconPath);
+  tray.setToolTip('할일 위젯');
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: '열기', click: () => mainWindow.show() },
+    { label: '종료', click: () => app.quit() }
+  ]));
 
-  // 1분마다 환경설정의 메일 계정으로 메일 동기화
-  // const db = require('./db');
-  // const { BrowserWindow } = require('electron');
-  let syncMailInterval = null;
-  const syncMail = async () => {
-    const row = db.prepare('SELECT * FROM mail_settings WHERE id=1').get();
-    if (row && row.mail_id && row.mail_pw && row.protocol) {
-      // mail_type이 없으면 기본값 'imap' 사용
-      if (!row.mail_type) row.mail_type = 'imap';
-      const mailModule = require('./mail');
-      if (typeof mailModule.syncMail === 'function') {
-        await mailModule.syncMail({ ...row, mail_server: row.mail_server });
-        // 메일 연동 후 renderer에 동기화 완료 신호
-        const win = BrowserWindow.getAllWindows()[0];
-        if (win) win.webContents.send('mail-sync-complete');
-      } else {
-        const win = BrowserWindow.getAllWindows()[0];
-        if (win) {
-          win.webContents.send('mail-connect', { ...row, mail_server: row.mail_server });
-        }
-      }
-    }
-  };
-  function startMailSync() {
-    if (syncMailInterval) clearInterval(syncMailInterval);
-    syncMailInterval = setInterval(syncMail, 60 * 1000);
-    syncMail(); // 앱 시작 직후 1회 실행
-  }
-  function stopMailSync() {
-    if (syncMailInterval) {
-      clearInterval(syncMailInterval);
-      syncMailInterval = null;
-    }
-  }
-  // 앱 시작 시 자동 연동
-  startMailSync();
+  // 주기적 메일 분석 및 동기화 (1분마다)
+  setInterval(async () => {
+    await syncMail();
+    addTodosFromEmailTodos(); // 이메일 flag 기반 할일 추가
+  }, 60000);
 
-  // IPC로 연동 시작/중지 제어
-  ipcMain.handle('start-mail-sync', () => {
-    startMailSync();
-    return { success: true };
-  });
-  ipcMain.handle('stop-mail-sync', () => {
-    stopMailSync();
-    return { success: true };
-  });
-  app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
+  syncMail();
 });
 
-app.on('window-all-closed', function () {
-  // 모든 창이 닫혀도 앱을 종료하지 않음 (트레이 아이콘 유지)
+// 에러 핸들링
+process.on('uncaughtException', (err) => {
+  if (err.code === 'ECONNRESET') return; 
+  console.error('System Error:', err);
 });
+
+app.on('window-all-closed', (e) => e.preventDefault());
