@@ -99,11 +99,15 @@
             container.innerHTML = (todos && todos.length) 
               ? todos.map(t => {
                   const dday = t.deadline ? getDDay(t.deadline) : null;
+                  const completed = t.todo_flag === 2;
                   return `
-                  <div class="todo-card">
+                  <div class="todo-card${completed ? ' completed' : ''}" data-id="${t.id}">
                     <div class="todo-top">
-                      <span class="todo-content">${t.task || t.content}</span>
+                      <span class="todo-content" style="${completed ? 'text-decoration:line-through;color:#aaa;' : ''}">${t.task || t.content}</span>
                       ${dday ? `<span class="d-day-badge ${dday.class}">${dday.text}</span>` : ''}
+                      <span class="delete-badge" style="display:none;cursor:pointer;margin-left:8px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff5e5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                      </span>
                     </div>
                     <div class="todo-bottom">
                       <span class="todo-date">${t.deadline ? '마감: ' + t.deadline : '기한 없음'}</span>
@@ -111,6 +115,35 @@
                   </div>`;
                 }).join('')
               : '<p style="color:#bbb; text-align:center; padding-top:20px;">할일이 없습니다.</p>';
+
+            // 카드 클릭 시 취소선/휴지통 토글
+            document.querySelectorAll('.todo-card').forEach(card => {
+              card.onclick = function(e) {
+                // 휴지통 클릭 시 카드 클릭 이벤트 막기
+                if (e.target.closest('.delete-badge')) return;
+                const content = card.querySelector('.todo-content');
+                const badge = card.querySelector('.delete-badge');
+                const isCompleted = content.style.textDecoration === 'line-through';
+                if (!isCompleted) {
+                  content.style.textDecoration = 'line-through';
+                  content.style.color = '#aaa';
+                  badge.style.display = 'inline-block';
+                } else {
+                  content.style.textDecoration = '';
+                  content.style.color = '';
+                  badge.style.display = 'none';
+                }
+              };
+              // 휴지통 클릭 시 삭제
+              card.querySelector('.delete-badge').onclick = async function(e) {
+                e.stopPropagation();
+                const id = card.getAttribute('data-id');
+                if (window.electronAPI && window.electronAPI.setTodoComplete) {
+                  await window.electronAPI.setTodoComplete(Number(id), 2); // 2: 삭제(완료)
+                  await refreshTodos();
+                }
+              };
+            });
           } catch (err) {
             console.error("Failed to load todos:", err);
           }
