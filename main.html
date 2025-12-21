@@ -301,11 +301,14 @@
               // 카드 클릭 시 취소선 토글 및 todo_flag=2로 변경
               cardList.querySelectorAll('.todo-card').forEach(card => {
                 card.addEventListener('click', async function(e) {
-                  if (this.classList.contains('done')) return;
-                  this.classList.add('done');
                   const id = this.getAttribute('data-id');
-                  if (id && window.electronAPI && window.electronAPI.setTodoComplete) {
-                    await window.electronAPI.setTodoComplete(Number(id), 2);
+                  if (!id || !window.electronAPI || !window.electronAPI.setTodoComplete) return;
+                  if (this.classList.contains('done')) {
+                    this.classList.remove('done');
+                    await window.electronAPI.setTodoComplete(Number(id), 1); // 미완료로 변경
+                  } else {
+                    this.classList.add('done');
+                    await window.electronAPI.setTodoComplete(Number(id), 2); // 완료로 변경
                   }
                 });
               });
