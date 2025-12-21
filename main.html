@@ -157,8 +157,7 @@
             text-decoration: line-through;
             color: #ffffff !important;
             text-decoration-color: #686868 !important;
-            font-color: #ff6868 !important;
-           
+          }
           .remove-todo-btn:hover {
             background:#ffeaea;
             border:1.5px solid #ffbaba;
@@ -650,6 +649,55 @@
 
     // 첫 화면 초기화
     renderMainContent(0);
+    // 최초 진입 시에도 할일카드 UI가 항상 동일하게 보이도록 getTodos()로 카드 렌더링 강제 실행
+    if (window.electronAPI && window.electronAPI.getTodos) {
+      setTimeout(() => {
+        window.electronAPI.getTodos().then(res => {
+          const cardList = document.getElementById('todoCardList');
+          if (!cardList) return;
+          if (res && res.length > 0) {
+            cardList.innerHTML = res.map((todo, i) => {
+              let deadlineStr = '';
+              let ddayStr = '';
+              if (todo.deadline && todo.deadline !== '없음') {
+                deadlineStr = todo.deadline;
+                const now = new Date();
+                const deadlineDate = new Date(todo.deadline);
+                if (!isNaN(deadlineDate)) {
+                  const diff = Math.ceil((deadlineDate - now) / (1000*60*60*24));
+                  ddayStr = diff >= 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
+                }
+              }
+              return `
+                <li class='todo-card' style='position:relative;'>
+                  <span style="color:#03af7c;font-weight:normal;margin-right:8px;">${deadlineStr}${ddayStr ? ' (' + ddayStr + ')' : ''}</span>
+                  <span>${todo.task || '(제목 없음)'}</span>
+                  <button class="remove-todo-btn" data-id="${todo.id}" title="제외" style="position:absolute;top:10px;right:12px;background:#fff;border:1.5px solid #e0e0e0;color:#ff5a5a;border-radius:50%;width:26px;height:26px;font-size:1.1em;line-height:1;cursor:pointer;box-shadow:0 1px 4px #00b49a11;display:flex;align-items:center;justify-content:center;transition:background 0.15s,border 0.15s;">-</button>
+                </li>
+              `;
+            }).join('');
+            cardList.querySelectorAll('.todo-card').forEach(card => {
+              card.addEventListener('click', function(e) {
+                if (e.target.classList.contains('remove-todo-btn')) return;
+                this.classList.toggle('done');
+              });
+            });
+            cardList.querySelectorAll('.remove-todo-btn').forEach(btn => {
+              btn.addEventListener('click', async function(e) {
+                e.stopPropagation();
+                const id = this.dataset.id;
+                if (window.electronAPI && window.electronAPI.excludeTodo) {
+                  await window.electronAPI.excludeTodo(Number(id));
+                }
+                renderMainContent(0);
+              });
+            });
+          } else {
+            cardList.innerHTML = `<li style='color:#bbb;text-align:center;padding:24px 0;'>등록된 할일이 없습니다.</li>`;
+          }
+        });
+      }, 150);
+    }
 
     // 동적으로 삽입된 키워드 관리 입력란 이벤트 연결
     async function loadKeywordsToList() {
