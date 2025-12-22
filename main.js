@@ -288,7 +288,13 @@ function notifyRefresh() {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200, height: 800, frame: false, transparent: true, alwaysOnTop: true,
+    width: 1200,
+    height: 800,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    title: 'Pomeranian',
+    icon: path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
   });
   mainWindow.loadFile('main.html');
@@ -299,11 +305,26 @@ ipcMain.on('close', () => { if (mainWindow) mainWindow.close(); });
 ipcMain.on('minimize', () => { if (mainWindow) mainWindow.minimize(); });
 ipcMain.on('open-app-settings', () => { /* 설정창 열기 로직 */ });
 ipcMain.on('open-emails', () => {
-  const win = new BrowserWindow({ width: 800, height: 600, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }, autoHideMenuBar: true });
+  const win = new BrowserWindow({
+    width: 800,
+    height: 600,
+    autoHideMenuBar: true,
+    title: 'Pomeranian',
+    icon: path.join(__dirname, 'assets', 'icon.png'),
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
+  });
   win.loadFile('mail-list.html');
 });
 ipcMain.on('open-mail-detail', (event, params) => {
-  const win = new BrowserWindow({ width: 700, height: 600, frame: false, alwaysOnTop: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true } });
+  const win = new BrowserWindow({
+    width: 700,
+    height: 600,
+    frame: false,
+    alwaysOnTop: true,
+    title: 'Pomeranian',
+    icon: path.join(__dirname, 'assets', 'icon.png'),
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
+  });
   win.loadURL(`file://${__dirname}/mail-detail.html?${params}`);
 });
 
@@ -375,7 +396,18 @@ app.whenReady().then(() => {
     const bgColor = isEmailTodo ? 'linear-gradient(90deg,#fff700 0%,#ffe98a 100%)' : 'rgba(0,180,154,0.95)';
     const title = isEmailTodo ? '이메일 할일' : '새 메일';
     const subject = isEmailTodo ? `[이메일 할일] ${email.subject}` : email.subject;
-    const popup = new BrowserWindow({ width: 320, height: 90, frame: false, alwaysOnTop: true, skipTaskbar: true, transparent: true, show: false, webPreferences: { contextIsolation: true, nodeIntegration: false } });
+    const popup = new BrowserWindow({
+      width: 320,
+      height: 90,
+      frame: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      transparent: true,
+      show: false,
+      title: 'Pomeranian',
+      icon: path.join(__dirname, 'assets', 'icon.png'),
+      webPreferences: { contextIsolation: true, nodeIntegration: false }
+    });
     const b = tray.getBounds();
     popup.setPosition(b.x - 120, b.y - 100);
     if (isEmailTodo) {

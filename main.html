@@ -307,6 +307,7 @@ async function refreshAll() {
 async function renderKeywordPage() {
   widgetMain.innerHTML = `
     <h2 style="color:#00b49a; margin:0 0 15px 0; font-size:1.1em; font-weight:800;">키워드 지능형 관리</h2>
+    <P style="color:#00b49a; margin:0 0 12px 0; font-size:0.8em; font-weight:300;">키워드가 있는 이메일을 할일로 분류합니다.</p>
     
     <div class="input-section">
       <div class="input-row" style="display: flex; gap: 8px; align-items: center;">
@@ -401,11 +402,38 @@ async function renderKeywordPage() {
       document.querySelectorAll('.del-kw').forEach(s => {
         s.onclick = async (e) => {
           e.stopPropagation();
-          const confirmDel = confirm(`'${s.parentElement.title.substring(0, 10)}...' 키워드를 삭제하시겠습니까?`);
-          if (confirmDel) {
+          // 커스텀 확인 모달 생성
+          const modal = document.createElement('div');
+          modal.style.position = 'fixed';
+          modal.style.left = 0;
+          modal.style.top = 0;
+          modal.style.width = '100vw';
+          modal.style.height = '100vh';
+          modal.style.background = 'rgba(0,0,0,0.18)';
+          modal.style.display = 'flex';
+          modal.style.alignItems = 'center';
+          modal.style.justifyContent = 'center';
+          modal.style.zIndex = 9999;
+          modal.innerHTML = `
+            <div style="background:#fff;padding:32px 36px;border-radius:14px;min-width:320px;max-width:90vw;box-shadow:0 4px 24px #00b49c22;display:flex;flex-direction:column;align-items:center;gap:18px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <img src='assets/icon.png' alt='앱 아이콘' style='width:32px;height:32px;vertical-align:middle;border-radius:8px;box-shadow:0 1px 4px #00b49a22;'>
+                <span style="font-weight:800;font-size:1.15em;">Pomeranian</span>
+              </div>
+              <div style="margin:12px 0 0 0;font-size:1.05em;color:#222;text-align:center;">'${s.parentElement.title.substring(0, 10)}...' 키워드를 삭제하시겠습니까?</div>
+              <div style="display:flex;gap:18px;margin-top:18px;">
+                <button id="confirmDelKeywordBtn" style="background:#00b49a;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:1em;cursor:pointer;">확인</button>
+                <button id="cancelDelKeywordBtn" style="background:#eee;color:#333;border:none;border-radius:6px;padding:8px 18px;font-size:1em;cursor:pointer;">취소</button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(modal);
+          document.getElementById('confirmDelKeywordBtn').onclick = async () => {
             await window.electronAPI.deleteKeyword(Number(s.dataset.id));
+            modal.remove();
             refresh();
-          }
+          };
+          document.getElementById('cancelDelKeywordBtn').onclick = () => modal.remove();
         };
       });
     } catch (err) {
@@ -433,7 +461,13 @@ async function renderKeywordPage() {
 }
     // 3. 휴지통
     async function renderTrashPage() {
-      widgetMain.innerHTML = `<h2 style="color:#00b49a;margin-bottom:15px;font-size:1em;">휴지통</h2><div id="trash-list"></div>`;
+      widgetMain.innerHTML = `<h2 style="color:#00b49a;margin-bottom:15px;font-size:1em;">휴지통</h2>
+<p style="color:#00b49a; margin:0 0 12px 0; font-size:0.8em; font-weight:300;">완료한 할일들</p>
+
+<div id="trash-list">
+      </div>
+       `;
+ 
       const todos = await window.electronAPI.getTodos('trash');
       const list = document.getElementById('trash-list');
       list.innerHTML = todos.length ? todos.map(t => `
