@@ -40,7 +40,7 @@ function markTodoEmails() {
 
 function addTodosFromEmailTodos() {
   try {
-    const deletedMails = db.prepare('SELECT subject, body FROM delemail').all();
+    const deletedMails = db.prepare('SELECT subject FROM delemail').all();
     const excludeKeywords = db.prepare("SELECT word FROM keywords WHERE type = 'exclude'").all().map(r => r.word);
     
     // 1. 변환 대기 중인(todo_flag = 1) 메일만 가져옴
@@ -58,8 +58,8 @@ function addTodosFromEmailTodos() {
     const today = new Date().toISOString().slice(0, 10);
 
     for (const mail of targetEmails) {
-      // 삭제/제외 로직
-      if (deletedMails.some(dm => dm.subject && mail.subject && similarity(dm.subject, mail.subject) >= 0.8)) {
+      // 한번이라도 delemail로 이동된(제외된) 제목은 다시 todos로 분류하지 않음
+      if (deletedMails.some(dm => dm.subject && mail.subject && normalize(dm.subject) === normalize(mail.subject))) {
         updateEmailFlag.run(mail.id);
         continue;
       }
