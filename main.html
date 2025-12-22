@@ -6,7 +6,7 @@
   <style>
     body { margin: 0; padding: 0; background: transparent; font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif; overflow: hidden; }
     .widget-home { position: fixed; top: 40px; left: 40px; width: 520px; height: 600px; background: #f8fffd; border-radius: 18px; box-shadow: 0 4px 32px #00b49a22, 0 1.5px 0 #00b49a11; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #eef2f1; }
-    .widget-home-header { height: 64px; background: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; box-shadow: 0 2px 8px #00b49a11; font-size: 1.15em; font-weight: bold; color: #00b49a; -webkit-app-region: drag; flex-shrink: 0; }
+    .widget-home-header { height: 64px; background: #fff; display: flex; align-items: center; justify-content: center; position: relative; padding: 0 24px; box-shadow: 0 2px 8px #00b49a11; font-size: 1.15em; font-weight: bold; color: #00b49a; -webkit-app-region: drag; flex-shrink: 0; }
     .widget-home-header * { -webkit-app-region: no-drag; }
     
     .widget-home-sidebar { width: 56px; height: 100%; background: #ffffff; border-right: 1px solid #f0f0f0; display: flex; flex-direction: column; align-items: center; gap: 16px; padding-top: 20px; flex-shrink: 0; }
@@ -55,11 +55,11 @@
 <body>
   <div class="widget-home">
     <div class="widget-home-header">
-      <span style="display:inline-flex;align-items:center;gap:0;">
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;">
         <img src="assets/icon.png" alt="앱 아이콘" style="width:32px;height:32px;vertical-align:middle;border-radius:8px;box-shadow:0 1px 4px #00b49a22;">
-        <span style="margin-left:0;font-weight:800;">Pomeranian</span>
-      </span>
-      <button id="closeBtn" style="background:transparent;border:none;font-size:1.5em;color:#00b49a;cursor:pointer;">&times;</button>
+        <span style="font-weight:800;font-size:1.15em;">Pomeranian</span>
+      </div>
+      <button id="closeBtn" style="position:absolute;right:24px;top:50%;transform:translateY(-50%);background:transparent;border:none;font-size:1.5em;color:#00b49a;cursor:pointer;">&times;</button>
     </div>
 
     <div class="widget-content-area">
