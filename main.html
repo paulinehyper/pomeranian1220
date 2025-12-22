@@ -103,7 +103,7 @@
       const title = isEmail ? (item.subject || '(제목 없음)') : (item.task || item.content);
       
       return `
-        <div class="todo-card ${isDone ? 'completed' : ''}" data-id="${taskId}" data-is-email="${isEmail}">
+        <div class="todo-card ${isDone ? 'completed' : ''}" data-id="${taskId}" data-is-email="${isEmail}" draggable="true">
           <div class="todo-top">
             <div class="todo-content-wrapper">
               ${isEmail ? `<span class="todo-source">Email: ${item.from_addr || '알 수 없음'}</span>` : ''}
@@ -127,8 +127,9 @@
         </div>`;
     }
 
-    // 카드 이벤트 바인딩
+    // 카드 이벤트 바인딩 및 드래그앤드롭
     function bindCardEvents(container) {
+      let dragSrc = null;
       container.querySelectorAll('.todo-card').forEach(card => {
         const id = Number(card.getAttribute('data-id'));
         const isEmail = card.getAttribute('data-is-email') === 'true';
@@ -164,7 +165,54 @@
             }
           };
         }
+
+        // --- 드래그앤드롭 이벤트 ---
+        card.addEventListener('dragstart', function(e) {
+          dragSrc = card;
+          card.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        card.addEventListener('dragend', function() {
+          card.classList.remove('dragging');
+          dragSrc = null;
+        });
+        card.addEventListener('dragover', function(e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+        card.addEventListener('dragenter', function(e) {
+          e.preventDefault();
+          if (card !== dragSrc) card.classList.add('drag-over');
+        });
+        card.addEventListener('dragleave', function() {
+          card.classList.remove('drag-over');
+        });
+        card.addEventListener('drop', function(e) {
+          e.preventDefault();
+          if (card !== dragSrc) {
+            card.classList.remove('drag-over');
+            // DOM에서 위치 바꾸기
+            if (dragSrc && dragSrc.parentNode === card.parentNode) {
+              card.parentNode.insertBefore(dragSrc, card.nextSibling);
+            }
+            // 순서 저장
+            saveTodoOrder(container);
+          }
+        });
       });
+    }
+
+    // 순서 저장 함수
+    async function saveTodoOrder(container) {
+      const cards = Array.from(container.querySelectorAll('.todo-card'));
+      const orderArray = cards.map((card, idx) => ({
+        id: Number(card.getAttribute('data-id')),
+        order: idx
+      }));
+      if (orderArray.length > 0) {
+        await window.electronAPI.updateTodoOrder(orderArray);
+        refreshAll();
+      }
     }
 
 // 메인 리스트 새로고침

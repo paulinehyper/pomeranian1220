@@ -73,6 +73,12 @@ try {
   if (!pragma.some(col => col.name === 'type')) {
     db.exec('ALTER TABLE keywords ADD COLUMN type TEXT');
   }
+
+  // todos 테이블에 sort_order 컬럼 추가
+  const todoColumns = db.prepare('PRAGMA table_info(todos)').all();
+  if (!todoColumns.some(col => col.name === 'sort_order')) {
+    db.exec('ALTER TABLE todos ADD COLUMN sort_order INTEGER DEFAULT 0');
+  }
 } catch (e) { console.error("DB Init Error:", e); }
 
 /**
@@ -104,8 +110,7 @@ ipcMain.handle('get-todos', (event, mode) => {
   try {
     let todos = (mode === 'trash') 
       ? db.prepare('SELECT * FROM todos WHERE todo_flag = 3 ORDER BY id DESC').all()
-      : db.prepare('SELECT * FROM todos WHERE todo_flag IN (1, 2) ORDER BY id').all();
-    
+      : db.prepare('SELECT * FROM todos WHERE todo_flag IN (1, 2) ORDER BY sort_order ASC, id DESC').all();
     return todos.map(t => ({
       id: t.id,
       task: t.task || t.content || '제목 없음',
@@ -116,6 +121,19 @@ ipcMain.handle('get-todos', (event, mode) => {
       todo_flag: t.todo_flag
     }));
   } catch (err) { return []; }
+});
+
+// Drag & Drop 순서 저장용 IPC 핸들러
+ipcMain.handle('update-todo-order', (event, orderArray) => {
+  // orderArray 예시: [{id: 5, order: 0}, {id: 2, order: 1}, ...]
+  const updateStmt = db.prepare('UPDATE todos SET sort_order = ? WHERE id = ?');
+  const transaction = db.transaction((items) => {
+    for (const item of items) {
+      updateStmt.run(item.order, item.id);
+    }
+  });
+  transaction(orderArray);
+  return { success: true };
 });
 
 // 할일 추가
