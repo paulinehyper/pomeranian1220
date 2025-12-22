@@ -342,14 +342,30 @@ app.whenReady().then(() => {
     const isEmailTodo = email.todo_flag === 1 || email.todo_flag === 2;
     const bgColor = isEmailTodo ? 'linear-gradient(90deg,#fff700 0%,#ffe98a 100%)' : 'rgba(0,180,154,0.95)';
     const title = isEmailTodo ? '이메일 할일' : '새 메일';
-    // 제목에 [이메일 할일] 표시
     const subject = isEmailTodo ? `[이메일 할일] ${email.subject}` : email.subject;
-    const popup = new BrowserWindow({ width: 320, height: 90, frame: false, alwaysOnTop: true, skipTaskbar: true, transparent: true, show: false, webPreferences: { contextIsolation: true } });
+    const popup = new BrowserWindow({ width: 320, height: 90, frame: false, alwaysOnTop: true, skipTaskbar: true, transparent: true, show: false, webPreferences: { contextIsolation: true, nodeIntegration: false } });
     const b = tray.getBounds();
     popup.setPosition(b.x - 120, b.y - 100);
-    popup.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(`<body style="margin:0;padding:15px;background:${bgColor};color:#222;border-radius:10px;font-family:sans-serif;overflow:hidden;"><b>${title}</b><br><div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${subject}</div></body>`));
-    popup.once('ready-to-show', () => popup.show());
-    setTimeout(() => { if (!popup.isDestroyed()) popup.close(); }, 3500);
+    if (isEmailTodo) {
+      // 닫기 버튼 추가, 클릭 시 창 닫힘
+      const html = `
+        <body style="margin:0;padding:15px;background:${bgColor};color:#222;border-radius:10px;font-family:sans-serif;overflow:hidden;position:relative;">
+          <b>${title}</b>
+          <button id='closeBtn' style="position:absolute;top:10px;right:10px;background:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:15px;cursor:pointer;">×</button>
+          <div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${subject}</div>
+          <script>
+            document.getElementById('closeBtn').onclick = function() { window.close(); };
+          </script>
+        </body>`;
+      popup.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+      popup.once('ready-to-show', () => popup.show());
+      // 자동 닫힘 없음 (사용자가 닫기 버튼 클릭해야 닫힘)
+    } else {
+      // 기존 새 메일 알림: 자동 닫힘
+      popup.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(`<body style=\"margin:0;padding:15px;background:${bgColor};color:#222;border-radius:10px;font-family:sans-serif;overflow:hidden;\"><b>${title}</b><br><div style=\"font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">${subject}</div></body>`));
+      popup.once('ready-to-show', () => popup.show());
+      setTimeout(() => { if (!popup.isDestroyed()) popup.close(); }, 3500);
+    }
   };
 
   setInterval(syncMail, 60000);
