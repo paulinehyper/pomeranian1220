@@ -82,50 +82,55 @@ function setupMailIpc(main) {
       const crypto = require('crypto');
       const exists = db.prepare('SELECT COUNT(*) as cnt FROM emails WHERE unique_hash = ?');
       // [수정된 extractDeadline 함수]
-      function extractDeadline(text) {
-        if (!text) return null;
+      
+// [mail.js 내부의 extractDeadline 함수를 아래 코드로 교체하세요]
+function extractDeadline(text) {
+  if (!text) return null;
 
-        // 1. 다양한 패턴 정의 (YYYY-MM-DD, MM/DD, MM.DD, 한글 등)
-        const patterns = [
-          /\b(\d{4})[./-](\d{1,2})[./-](\d{1,2})\b/, // 2025-12-30
-          /\b(\d{1,2})[\/.](\d{1,2})\b/,             // 12/30 또는 12.30
-          /(\d{1,2})월\s*(\d{1,2})일/                // 12월 30일
-        ];
+  // 1. 정규식 패턴 정의 (우선순위 순서)
+  const patterns = [
+    // (1) YYYY-MM-DD 또는 YYYY.MM.DD 또는 YYYY년 MM월 DD일
+    /\b(\d{4})[./-년\s]+(\d{1,2})[./-월\s]+(\d{1,2})[일\s]*\b/,
+    // (2) MM/DD 또는 MM.DD (예: 12/30, 01.15)
+    /\b(\d{1,2})[\/.](\d{1,2})\b/,
+    // (3) MM월 DD일 (예: 12월 30일)
+    /(\d{1,2})월\s*(\d{1,2})일/
+  ];
 
-        for (let i = 0; i < patterns.length; i++) {
-          const match = text.match(patterns[i]);
-          if (match) {
-            let y, m, d;
-            const now = new Date();
-            const currentYear = now.getFullYear();
+  for (let i = 0; i < patterns.length; i++) {
+    const match = text.match(patterns[i]);
+    if (match) {
+      let y, m, d;
+      const now = new Date();
+      const currentYear = now.getFullYear();
 
-            if (i === 0) { // YYYY-MM-DD 형식
-              y = parseInt(match[1]);
-              m = parseInt(match[2]);
-              d = parseInt(match[3]);
-            } else { // MM/DD 또는 MM월 DD일 형식
-              m = parseInt(match[1]);
-              d = parseInt(match[2]);
-              // [핵심 로직] 연도 지능형 계산
-              // 일단 올해 날짜로 생성
-              let targetDate = new Date(currentYear, m - 1, d);
-              // 오늘(시간 제외)보다 과거 날짜라면 내년으로 설정
-              const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-              if (targetDate < today) {
-                y = currentYear + 1;
-              } else {
-                y = currentYear;
-              }
-            }
-
-            // 최종 날짜 유효성 검사 및 포맷팅 (YYYY-MM-DD)
-            if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
-              return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-            }
-          }
-        }
-        return null;
+      if (i === 0) { 
+        // 연도가 포함된 경우 (YYYY-MM-DD 등)
+        y = parseInt(match[1]);
+        m = parseInt(match[2]);
+        d = parseInt(match[3]);
+      } else { 
+        // 연도가 없는 경우 (MM/DD 또는 MM월 DD일)
+        m = parseInt(match[1]);
+        d = parseInt(match[2]);
+        
+        // 지능형 연도 계산: 오늘보다 지난 날짜면 내년으로 처리
+        let targetDate = new Date(currentYear, m - 1, d);
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        y = (targetDate < today) ? currentYear + 1 : currentYear;
       }
+
+      // 날짜 유효성 검사 및 포맷팅
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        const formattedDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        console.log(`[날짜 추출 성공] "${text.substring(0, 20)}..." -> ${formattedDate}`);
+        return formattedDate;
+      }
+    }
+  }
+  return null;
+}
+
       for (const msg of messages) {
         try {
           const headerPart = msg.parts.find(p => p.which === 'HEADER');
