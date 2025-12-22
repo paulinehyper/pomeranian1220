@@ -39,13 +39,13 @@ function markTodoEmails() {
   const update = db.prepare('UPDATE emails SET todo_flag = 1 WHERE id = ?');
   for (const mail of emails) {
     const text = (mail.subject + ' ' + (mail.body || '')).toLowerCase();
-    // 요청/요구/청구/협조/제출/회신/답장/작성/기재 등 행위 키워드가 포함된 경우만 todo로 분류
+    // actionKeywords 또는 keywords 중 하나라도 포함되면 todo로 분류
     const actionKeywords = [
       '요청', '요구', '청구', '협조', '제출', '회신', '답장', '작성', '기재'
     ];
     const hasAction = actionKeywords.some(k => text.includes(k));
     const hasTodoKeyword = keywords.some(k => k && text.includes(k.toLowerCase()));
-    if (hasAction && hasTodoKeyword) {
+    if (hasAction || hasTodoKeyword) {
       update.run(mail.id);
     }
   }
@@ -61,71 +61,99 @@ module.exports = markTodoEmails;
 // emails 테이블에서 todo_flag=1인 이메일을 todos 테이블에 할일로 추가
 
 function addTodosFromEmailTodos() {
-  // 1. email.todo_flag=0인 메일 기반 todos를 삭제
-  // emails.todo_flag=0인 메일은 todos에서도 todo_flag=0으로 동기화(삭제 대신 숨김)
-  const emailsToRemove = db.prepare('SELECT subject FROM emails WHERE todo_flag = 0').all();
-  const updateTodo = db.prepare('UPDATE todos SET todo_flag = 0 WHERE task = ? AND todo_flag = 1');
-  for (const mail of emailsToRemove) {
-    updateTodo.run(mail.subject);
-  }
-
-  // 2. email.todo_flag=1인 메일을 todos에 추가 (중복 방지)
-  const emails = db.prepare('SELECT id, subject, body, deadline FROM emails WHERE todo_flag = 1').all();
-  const insertTodo = db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag) VALUES (?, ?, ?, ?, ?, 1)');
+  const deletedMails = db.prepare('SELECT subject, body FROM delemail').all();
+  const excludeKeywords = db.prepare("SELECT word FROM keywords WHERE type = 'exclude'").all().map(r => r.word);
+  const emails = db.prepare('SELECT id, subject, body, deadline, received_at FROM emails WHERE todo_flag = 1').all();
+  const checkExists = db.prepare('SELECT todo_flag FROM todos WHERE email_hash = ?');
+  const insertTodo = db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag, email_hash) VALUES (?, ?, ?, ?, ?, 1, ?)');
+  const crypto = require('crypto');
   const now = new Date();
   const thisYear = now.getFullYear();
-  const today = now.toISOString().slice(0, 10); // YYYY-MM-DD
+  const today = now.toISOString().slice(0, 10);
 
-  // 다양한 날짜 패턴을 찾아 올해 날짜 또는 해당 날짜로 변환, 키워드와 함께 있을 때만 deadline으로 간주
+  // --- 날짜 추출 함수 보강 ---
   function extractDeadlineDate(str) {
     if (!str) return null;
-    // 본문 내 '기한:', '마감일:', '제출일:' 등과 날짜가 함께 있으면 우선적으로 deadline으로 인식
-    const deadlineLabel = /(기한|마감일|제출일)\s*[:：]?\s*([\d./월-]+)/i;
-    let m = str.match(deadlineLabel);
-    if (m) {
-      // 날짜 부분만 추출해서 재귀적으로 날짜 파싱
-      const datePart = m[2];
-      // 아래 기존 패턴 재활용
-      return extractDeadlineDate(datePart);
+
+    // 1. (M/D), (M.D), (M-D) 또는 M/D 형식 찾기
+    // 예: (2/25), 12/31, 01-15 등
+    const monthDayMatch = str.match(/(\d{1,2})[\/.\-](\d{1,2})/);
+    if (monthDayMatch) {
+      const month = parseInt(monthDayMatch[1], 10);
+      const day = parseInt(monthDayMatch[2], 10);
+      
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        let year = thisYear;
+        // 현재 날짜보다 추출된 날짜가 과거라면 내년으로 설정
+        const candidate = new Date(year, month - 1, day);
+        if (candidate < now.setHours(0, 0, 0, 0)) {
+          year = thisYear + 1;
+        }
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
     }
-    // 기존 키워드 방식
-    const keyword = /(제출|마감|기한|due|deadline|까지|limit|제출일|마감일)/i;
-    if (!keyword.test(str)) return null;
-    // (M/D) 또는 (M.D) 패턴
-    m = str.match(/\((\d{1,2})[\/.](\d{1,2})\)/);
-    if (m) {
-      const month = m[1].padStart(2, '0');
-      const day = m[2].padStart(2, '0');
-      return `${thisYear}-${month}-${day}`;
+
+    // 2. M월 D일 형식 찾기
+    const korDateMatch = str.match(/(\d{1,2})월\s*(\d{1,2})일/);
+    if (korDateMatch) {
+      const month = parseInt(korDateMatch[1], 10);
+      const day = parseInt(korDateMatch[2], 10);
+      let year = thisYear;
+      const candidate = new Date(year, month - 1, day);
+      if (candidate < now.setHours(0, 0, 0, 0)) {
+        year = thisYear + 1;
+      }
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     }
-    // 1.1 또는 1/1 또는 1월1 패턴 (공백 없이)
-    m = str.match(/(\d{1,2})[\/.월](\d{1,2})(?!\d)/);
-    if (m) {
-      const month = m[1].padStart(2, '0');
-      const day = m[2].padStart(2, '0');
-      return `${thisYear}-${month}-${day}`;
-    }
-    // YYYY-MM-DD 패턴
-    m = str.match(/(\d{4})-(\d{2})-(\d{2})/);
-    if (m) {
-      return `${m[1]}-${m[2]}-${m[3]}`;
-    }
+
+    // 3. YYYY-MM-DD 형식 (기존 유지)
+    const fullDateMatch = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (fullDateMatch) return fullDateMatch[0];
+
     return null;
   }
 
+  // --- 유사도 함수 (기존 유지) ---
+  function normalize(str) {
+    return (str || '').toLowerCase().replace(/\s+/g, '').replace(/[^\w가-힣]/g, '');
+  }
+  function similarity(a, b) {
+    a = normalize(a); b = normalize(b);
+    if (!a || !b) return 0;
+    const m = a.length, n = b.length;
+    const dp = Array.from({length: m+1}, () => Array(n+1).fill(0));
+    for (let i=0; i<=m; i++) dp[i][0] = i;
+    for (let j=0; j<=n; j++) dp[0][j] = j;
+    for (let i=1; i<=m; i++) {
+      for (let j=1; j<=n; j++) {
+        if (a[i-1] === b[j-1]) dp[i][j] = dp[i-1][j-1];
+        else dp[i][j] = 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+      }
+    }
+    return 1 - dp[m][n] / Math.max(m, n);
+  }
+
+  // --- 메일 루프 ---
   for (const mail of emails) {
-    const exists = db.prepare('SELECT COUNT(*) as cnt FROM todos WHERE task = ? AND todo_flag = 1').get(mail.subject).cnt;
-    if (exists === 0) {
-      // (M/D) 패턴이 subject/body에 있고, 키워드가 함께 있으면 deadline으로 사용
-      let deadline = mail.deadline || '';
-      const parsedDate = extractDeadlineDate(mail.subject) || extractDeadlineDate(mail.body);
-      if (parsedDate) deadline = parsedDate;
+    if (deletedMails.some(dm => (dm.subject && mail.subject && similarity(dm.subject, mail.subject) >= 0.8) || (dm.body && mail.body && similarity(dm.body, mail.body) >= 0.8))) continue;
+    if (excludeKeywords.some(kw => kw && mail.subject && similarity(kw, mail.subject) >= 0.8)) continue;
+
+    const receivedAt = mail.received_at || '';
+    const uniqueId = crypto.createHash('sha256').update((receivedAt || '') + (mail.subject || '')).digest('hex');
+
+    const existingTodo = checkExists.get(uniqueId);
+
+    if (!existingTodo) {
+      // 우선순위: 1. 제목에서 날짜 추출 -> 2. 본문에서 날짜 추출 -> 3. 기존 메일 deadline 컬럼
+      let finalDeadline = extractDeadlineDate(mail.subject) || extractDeadlineDate(mail.body) || mail.deadline || '';
+
       insertTodo.run(
-        today, // date
-        '',    // dday
-        mail.subject, // task
-        mail.body || '', // memo
-        deadline // deadline
+        today, 
+        '', 
+        mail.subject, 
+        mail.body || '', 
+        finalDeadline, 
+        uniqueId
       );
     }
   }
