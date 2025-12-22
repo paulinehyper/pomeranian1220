@@ -5,39 +5,15 @@ const fs = require('fs');
 const autoLauncher = require('./auto-launch');
 const db = require('./db');
 const { addTodosFromEmailTodos } = require('./email_todo_flag');
+const setupMailIpc = require('./mail'); // mail.js 모듈 로드
 
 let mainWindow = null;
-let appSettingsWindow = null;
-let emailsWindow = null;
-let keywordWindow = null;
 let tray = null;
-let syncMailInterval = null;
 
 // OS별 아이콘 경로 설정
 const iconPath = process.platform === 'darwin'
   ? path.join(__dirname, 'assets', 'icon.png')
   : path.join(__dirname, 'icon.ico');
-const winIcon = iconPath;
-
-// --- 유틸리티 함수 ---
-const extractDeadline = (body) => {
-  if (!body) return null;
-  const patterns = [
-    /(\d{4})[./-](\d{1,2})[./-](\d{1,2})/,
-    /(\d{1,2})[./-](\d{1,2})/,
-    /(\d{1,2})월\s?(\d{1,2})일/,
-    /(\d{1,2})일/,
-    /(\d{1,2})일까지/
-  ];
-  for (const re of patterns) {
-    const m = body.match(re);
-    if (m) {
-      if (m.length >= 4 && m[1].length === 4) return `${m[1]}/${m[2].padStart(2, '0')}/${m[3].padStart(2, '0')}`;
-      return `${new Date().getFullYear()}/${(m[1] || '').padStart(2, '0')}/${(m[2] || '01').padStart(2, '0')}`;
-    }
-  }
-  return null;
-};
 
 // --- IPC 핸들러 등록 ---
 
@@ -58,6 +34,7 @@ ipcMain.handle('get-todos', (event, mode) => {
       todo_flag: t.todo_flag
     }));
   } catch (err) {
+    console.error('get-todos error:', err);
     return [];
   }
 });
@@ -66,10 +43,24 @@ ipcMain.handle('insert-todo', (event, { task, deadline, memo }) => {
   try {
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 19).replace('T', ' ');
-    db.prepare('INSERT INTO todos (date, task, memo, deadline, todo_flag) VALUES (?, ?, ?, ?, 1)')
-      .run(dateStr, task, memo || '', deadline || '');
+    // dday 계산 로직
+    let ddayValue = 0;
+    if (deadline) {
+      const target = new Date(deadline);
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const diffTime = target - today;
+      ddayValue = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+
+    // dday 컬럼을 포함하여 INSERT (테이블 제약 조건 충족)
+    const stmt = db.prepare(`
+      INSERT INTO todos (date, task, memo, deadline, dday, todo_flag)
+      VALUES (?, ?, ?, ?, ?, 1)
+    `);
+    stmt.run(dateStr, task, memo || '', deadline || '', ddayValue);
     return { success: true };
   } catch (err) {
+    console.error('insert-todo error:', err);
     return { success: false, error: err.message };
   }
 });
@@ -84,7 +75,7 @@ ipcMain.handle('exclude-todo', (event, id) => {
   return { success: true };
 });
 
-// 2. 키워드 관련 (중복 제거 및 통합)
+// 2. 키워드 관련
 ipcMain.handle('get-keywords', async () => {
   return db.prepare("SELECT id, word FROM keywords").all();
 });
@@ -92,7 +83,7 @@ ipcMain.handle('get-keywords', async () => {
 ipcMain.handle('insert-keyword', (event, keyword) => {
   try {
     db.prepare('INSERT INTO keywords (word) VALUES (?)').run(keyword);
-    // 키워드가 포함된 메일을 자동으로 할일(todo_flag=1)로 변경
+    // 키워드 포함 메일 즉시 업데이트
     db.prepare('UPDATE emails SET todo_flag = 1 WHERE subject LIKE ?').run(`%${keyword}%`);
     return { success: true };
   } catch (err) {
@@ -124,6 +115,8 @@ ipcMain.handle('save-mail-settings', (event, settings) => {
         host=excluded.host, port=excluded.port, mail_since=excluded.mail_since
     `);
     stmt.run(settings.protocol, settings.mailId, settings.mailPw, settings.host, settings.port, settings.mailSince);
+    
+    // 설정 저장 후 즉시 동기화 시도
     setTimeout(() => syncMail(), 1000);
     return { success: true };
   } catch (err) {
@@ -141,47 +134,59 @@ ipcMain.on('open-mail-detail', (event, params) => {
   detailWindow.loadURL(`file://${__dirname}/mail-detail.html?${params}`);
 });
 
-ipcMain.on('close', () => mainWindow.close());
-ipcMain.on('minimize', () => mainWindow.minimize());
+ipcMain.on('close', () => { if (mainWindow) mainWindow.close(); });
+ipcMain.on('minimize', () => { if (mainWindow) mainWindow.minimize(); });
 
 // --- 메인 함수 및 동기화 로직 ---
 
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200, height: 800, frame: false, transparent: true, alwaysOnTop: true,
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
+    webPreferences: { 
+      preload: path.join(__dirname, 'preload.js'), 
+      contextIsolation: true,
+      nodeIntegration: false 
+    }
   });
   mainWindow.loadFile('main.html');
 }
 
 async function syncMail() {
-  const row = db.prepare('SELECT * FROM mail_settings WHERE id=1').get();
-  if (row && row.mail_id && row.mail_pw) {
-    const mailModule = require('./mail');
-    if (typeof mailModule.syncMail === 'function') {
-      await mailModule.syncMail(row);
-      if (mainWindow) mainWindow.webContents.send('mail-sync-complete');
+  try {
+    const row = db.prepare('SELECT * FROM mail_settings WHERE id=1').get();
+    if (row && row.mail_id && row.mail_pw) {
+      const mailModule = require('./mail');
+      if (typeof mailModule.syncMail === 'function') {
+        await mailModule.syncMail(row);
+        if (mainWindow) mainWindow.webContents.send('mail-sync-complete');
+      }
     }
+  } catch (err) {
+    console.error('Sync Mail Error:', err);
   }
 }
 
 app.whenReady().then(() => {
+  // 1. mail.js의 핸들러 등록 (mail-connect 등)
+  setupMailIpc(mainWindow);
+
   createWindow();
   
   // 트레이 설정
   tray = new Tray(iconPath);
   tray.setToolTip('할일 위젯');
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: '열기', click: () => mainWindow.show() },
+    { label: '열기', click: () => { if (mainWindow) mainWindow.show(); } },
     { label: '종료', click: () => app.quit() }
   ]));
 
   // 주기적 메일 분석 및 동기화 (1분마다)
   setInterval(async () => {
     await syncMail();
-    addTodosFromEmailTodos(); // 이메일 flag 기반 할일 추가
+    addTodosFromEmailTodos(); // 이메일 flag 기반 할일 추가 로직 실행
   }, 60000);
 
+  // 초기 실행 시 동기화
   syncMail();
 });
 
@@ -191,4 +196,6 @@ process.on('uncaughtException', (err) => {
   console.error('System Error:', err);
 });
 
-app.on('window-all-closed', (e) => e.preventDefault());
+app.on('window-all-closed', (e) => {
+  if (process.platform !== 'darwin') app.quit();
+});
