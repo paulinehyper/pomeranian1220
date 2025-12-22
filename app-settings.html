@@ -41,6 +41,7 @@
     <div class="btn-row" style="display:flex;justify-content:flex-end;gap:12px;margin-top:18px;">
       <button class="ok-btn" id="okSettings" style="background:#00b49c;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:1em;cursor:pointer;">확인</button>
       <button class="close-btn" id="closeSettings" style="background:#aaa;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:1em;cursor:pointer;">닫기</button>
+      <button class="ok-btn" id="openMailList" style="background:#fff;color:#00b49c;border:1.5px solid #00b49c;border-radius:6px;padding:8px 18px;font-size:1em;cursor:pointer;">메일보기</button>
     </div>
   </div>
   <script>
@@ -51,6 +52,31 @@
       document.getElementById('autoLaunchChk').checked = !!enabled;
       lastChecked = !!enabled;
     });
+
+
+    // 메일 연동정보 자동 입력 함수
+    async function loadMailSettings() {
+      try {
+        const settings = await window.electronAPI.getMailSettings();
+        if (settings && settings.mailId) {
+          if (document.getElementById('protocol')) document.getElementById('protocol').value = settings.protocol || 'imap-ssl';
+          if (document.getElementById('mailId')) document.getElementById('mailId').value = settings.mailId || '';
+          if (document.getElementById('mailPw')) document.getElementById('mailPw').value = settings.mailPw || '';
+          if (document.getElementById('host')) document.getElementById('host').value = settings.host || '';
+          if (document.getElementById('imapPort')) document.getElementById('imapPort').value = settings.port || '';
+          if (document.getElementById('mailSince')) document.getElementById('mailSince').value = settings.mailSince || '';
+          console.log('기존 메일 설정 로드 완료');
+        }
+      } catch (err) {
+        console.error('메일 설정 불러오기 실패:', err);
+      }
+    }
+    window.addEventListener('DOMContentLoaded', loadMailSettings);
+
+    document.getElementById('openMailList').onclick = () => {
+      window.open('mail-list.html', 'mailList', 'width=800,height=600');
+    };
+
     document.getElementById('okSettings').onclick = () => {
       const checked = document.getElementById('autoLaunchChk').checked;
       if (checked !== lastChecked) {

@@ -1,3 +1,46 @@
+// delemail 테이블 생성 (없으면)
+try {
+  db.exec(`CREATE TABLE IF NOT EXISTS delemail (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject TEXT,
+    body TEXT,
+    from_addr TEXT,
+    received_at TEXT,
+    memo TEXT,
+    deadline TEXT
+  )`);
+} catch (e) {}
+
+// emails 테이블에서 할일 분류된 것 todos로, 아닌 것 delemail로 옮기는 함수
+async function moveEmailTodos() {
+  // 할일로 분류된 메일
+  const todoMails = db.prepare('SELECT * FROM emails WHERE todo_flag = 1').all();
+  todoMails.forEach(mail => {
+    db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, mail_flag) VALUES (?, ?, ?, ?, ?, ?)').run(
+      mail.received_at || '',
+      '',
+      mail.subject || '',
+      mail.memo || '',
+      mail.deadline || '',
+      'Y'
+    );
+    db.prepare('DELETE FROM emails WHERE id = ?').run(mail.id);
+  });
+  // 할일로 분류되지 않은 메일
+  const delMails = db.prepare('SELECT * FROM emails WHERE todo_flag != 1').all();
+  delMails.forEach(mail => {
+    db.prepare('INSERT INTO delemail (subject, body, from_addr, received_at, memo, deadline) VALUES (?, ?, ?, ?, ?, ?)').run(
+      mail.subject || '',
+      mail.body || '',
+      mail.from_addr || '',
+      mail.received_at || '',
+      mail.memo || '',
+      mail.deadline || ''
+    );
+    db.prepare('DELETE FROM emails WHERE id = ?').run(mail.id);
+  });
+}
+
 const { app, BrowserWindow, ipcMain, Tray, Menu, dialog } = require('electron');
 const path = require('path');
 const crypto = require('crypto');
@@ -6,6 +49,41 @@ const autoLauncher = require('./auto-launch');
 const db = require('./db');
 const { addTodosFromEmailTodos } = require('./email_todo_flag');
 const setupMailIpc = require('./mail'); // mail.js 모듈 로드
+
+
+// 메일 목록 새창 오픈 (main.html에서 독립적으로)
+ipcMain.on('open-emails', () => {
+  const mailListWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true
+    },
+    title: '메일 목록',
+    autoHideMenuBar: true,
+  });
+  mailListWindow.loadFile('mail-list.html');
+});
+// 환경설정 저장된 메일 연동정보 반환
+ipcMain.handle('get-mail-settings', (event) => {
+  try {
+    const row = db.prepare('SELECT * FROM mail_settings WHERE id=1').get();
+    if (!row) return {};
+    // camelCase로 반환
+    return {
+      protocol: row.protocol,
+      mailId: row.mail_id,
+      mailPw: row.mail_pw,
+      host: row.host,
+      port: row.port,
+      mailSince: row.mail_since
+    };
+  } catch (err) {
+    console.error('get-mail-settings error:', err);
+    return {};
+  }
+});
 
 let mainWindow = null;
 let tray = null;
@@ -71,8 +149,25 @@ ipcMain.handle('set-todo-complete', (event, id, flag) => {
 });
 
 ipcMain.handle('exclude-todo', (event, id) => {
+  // 제외 처리 및 제목을 제외키워드로 저장
+  const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(id);
+  if (todo && todo.task) {
+    // keywords 테이블에 제외키워드로 저장 (word, type)
+    try {
+      db.prepare('INSERT OR IGNORE INTO keywords (word, type) VALUES (?, ?)').run(todo.task, 'exclude');
+    } catch (e) {}
+  }
   db.prepare('UPDATE todos SET todo_flag = 0 WHERE id = ?').run(id);
   return { success: true };
+// keywords 테이블에 type 컬럼 추가 (없으면)
+try {
+  const pragma = db.prepare('PRAGMA table_info(keywords)').all();
+  if (!pragma.some(col => col.name === 'type')) {
+    db.exec('ALTER TABLE keywords ADD COLUMN type TEXT');
+  }
+} catch (e) {}
+
+// 할일 분류 시 제외키워드 참고 (email_todo_flag.js 등에서 활용)
 });
 
 // 2. 키워드 관련
@@ -157,8 +252,21 @@ async function syncMail() {
     if (row && row.mail_id && row.mail_pw) {
       const mailModule = require('./mail');
       if (typeof mailModule.syncMail === 'function') {
+        // 동기화 전 emails 테이블의 최신 메일 id 저장
+        const lastEmail = db.prepare('SELECT id FROM emails ORDER BY id DESC LIMIT 1').get();
         await mailModule.syncMail(row);
         if (mainWindow) mainWindow.webContents.send('mail-sync-complete');
+        // 동기화 후 새로 들어온 모든 메일에 대해 알림
+        const newEmails = lastEmail && lastEmail.id
+          ? db.prepare('SELECT subject, from_addr, received_at FROM emails WHERE id > ? ORDER BY id ASC').all(lastEmail.id)
+          : db.prepare('SELECT subject, from_addr, received_at FROM emails ORDER BY id ASC LIMIT 1').all();
+        if (newEmails && newEmails.length > 0 && tray) {
+          let delay = 0;
+          newEmails.forEach(email => {
+            setTimeout(() => showTrayPopup(email), delay);
+            delay += 3000;
+          });
+        }
       }
     }
   } catch (err) {
@@ -167,6 +275,40 @@ async function syncMail() {
 }
 
 app.whenReady().then(() => {
+      // 앱 시작 시 또는 동기화 후 emails 분류 및 이동
+      moveEmailTodos();
+    // 트레이 팝업(Toast) 함수 정의
+    global.showTrayPopup = function(email) {
+      const popup = new BrowserWindow({
+        width: 320,
+        height: 90,
+        frame: false,
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        resizable: false,
+        transparent: true,
+        show: false,
+        webPreferences: { contextIsolation: true }
+      });
+      // 트레이 위치 계산 (Windows 기준)
+      const trayBounds = tray.getBounds();
+      const x = trayBounds.x - 120;
+      const y = trayBounds.y - 100;
+      popup.setPosition(x, y, false);
+      popup.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(`
+        <body style="margin:0;padding:0;background:rgba(0,180,154,0.97);border-radius:12px;font-family:'Segoe UI','Malgun Gothic',Arial,sans-serif;box-shadow:0 4px 24px #00b49a44;">
+          <div style="padding:16px 18px 12px 18px;color:#fff;">
+            <div style="font-size:1em;font-weight:bold;">새 메일 도착!</div>
+            <div style="margin-top:6px;font-size:0.98em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><b>${email.subject}</b></div>
+            <div style="font-size:0.92em;margin-top:2px;">${email.from_addr}</div>
+            <div style="font-size:0.85em;color:#e0f7fa;margin-top:2px;">${email.received_at}</div>
+          </div>
+        </body>
+    
+      `));
+      popup.once('ready-to-show', () => popup.show());
+      setTimeout(() => { if (!popup.isDestroyed()) popup.close(); }, 3000);
+    };
   // 1. mail.js의 핸들러 등록 (mail-connect 등)
   setupMailIpc(mainWindow);
 
@@ -182,8 +324,13 @@ app.whenReady().then(() => {
 
   // 주기적 메일 분석 및 동기화 (1분마다)
   setInterval(async () => {
+    console.log('주기적 동기화 시작...');
     await syncMail();
     addTodosFromEmailTodos(); // 이메일 flag 기반 할일 추가 로직 실행
+    // [추가] 렌더러 프로세스에 데이터 갱신 신호 전송
+    if (mainWindow) {
+      mainWindow.webContents.send('refresh-all-lists');
+    }
   }, 60000);
 
   // 초기 실행 시 동기화

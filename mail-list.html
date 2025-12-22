@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>메일 목록</title>
+  <style>
+    body { font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif; background: #f8fffd; margin: 0; }
+    .mail-table { width: 100%; border-collapse: collapse; margin: 24px 0; background: #fff; }
+    .mail-table th, .mail-table td { border: 1px solid #e0e0e0; padding: 8px 12px; text-align: left; }
+    .mail-table th { background: #00b49a; color: #fff; }
+    .mail-table tr:nth-child(even) { background: #f4f8f7; }
+    .mail-table tr:hover { background: #e6fffb; }
+    .mail-list-header { font-size: 1.2em; font-weight: bold; color: #00b49a; margin: 24px 0 12px 0; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="mail-list-header">메일 연동 목록</div>
+  <table class="mail-table" id="mailTable">
+    <thead>
+      <tr>
+        <th>보낸사람</th>
+        <th>제목</th>
+        <th>수신일시</th>
+      </tr>
+    </thead>
+    <tbody id="mailTableBody">
+      <tr><td colspan="3" style="text-align:center;color:#aaa;">불러오는 중...</td></tr>
+    </tbody>
+  </table>
+  <script>
+    async function loadMailList() {
+      const mails = await window.electronAPI.getEmails();
+      const tbody = document.getElementById('mailTableBody');
+      if (!mails || mails.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#aaa;">메일이 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = mails.map(m => `
+        <tr>
+          <td>${m.from_addr || ''}</td>
+          <td>${m.subject || ''}</td>
+          <td>${m.received_at || ''}</td>
+        </tr>
+      `).join('');
+    }
+    window.addEventListener('DOMContentLoaded', loadMailList);
+  </script>
+</body>
+</html>

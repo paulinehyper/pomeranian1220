@@ -56,6 +56,7 @@ function setupMailIpc(main) {
         console.log('[syncMail] IMAP connected');
         const box = await conn.openBox('INBOX');
         console.log('[syncMail] INBOX opened');
+        // [중복 선언 제거] searchCriteria는 한 번만 선언하고 이후 재할당만 수행
         let searchCriteria = [];
         const mailSince = info.mailSince || info.mail_since;
         if (mailSince && typeof mailSince === 'string' && mailSince.trim() !== '') {
@@ -68,7 +69,13 @@ function setupMailIpc(main) {
         } else {
           searchCriteria = ["ALL"];
         }
-        console.log('[syncMail] searchCriteria:', searchCriteria);
+        // [중요] DB에서 가장 최근 메일의 수신 날짜를 가져와, 있으면 searchCriteria를 덮어씀
+        const lastEmail = db.prepare('SELECT received_at FROM emails ORDER BY received_at DESC LIMIT 1').get();
+        if (lastEmail && lastEmail.received_at) {
+          // 마지막 수신일 이후의 메일만 조회 (IMAP SINCE는 해당 날짜를 포함함)
+          const sinceDate = new Date(lastEmail.received_at);
+          searchCriteria = [["SINCE", sinceDate]];
+        }
         const fetchOptions = {
           bodies: ["HEADER", "TEXT"],
           struct: true
@@ -77,7 +84,6 @@ function setupMailIpc(main) {
         console.log(`[syncMail] messages found: ${messages.length}`);
         const { simpleParser } = require('mailparser');
         const crypto = require('crypto');
-        const insert = db.prepare('INSERT INTO emails (received_at, subject, body, from_addr, todo_flag, unique_hash, deadline) VALUES (?, ?, ?, ?, ?, ?, ?)');
         const exists = db.prepare('SELECT COUNT(*) as cnt FROM emails WHERE unique_hash = ?');
         function extractDeadline(body) {
           if (!body) return null;
