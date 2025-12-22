@@ -128,50 +128,53 @@
         `;
       }
 
-      // [이벤트] 카드 클릭 핸들러 등록
-      function bindCardEvents(container) {
-        container.querySelectorAll('.todo-card').forEach(card => {
-          const id = Number(card.getAttribute('data-id'));
-          const isEmail = card.getAttribute('data-is-email') === 'true';
+     // [이벤트] 카드 클릭 핸들러 등록
+function bindCardEvents(container) {
+  container.querySelectorAll('.todo-card').forEach(card => {
+    const id = Number(card.getAttribute('data-id'));
+    const isEmail = card.getAttribute('data-is-email') === 'true';
 
-          // 1. 제목 클릭 시 완료/미완료 토글
-          card.querySelector('.todo-content').onclick = async (e) => {
-            const isDone = card.classList.contains('completed');
-            const nextFlag = isDone ? 1 : 2;
-            if (isEmail) {
-              await window.electronAPI.setMailComplete(id, nextFlag);
-            } else {
-              await window.electronAPI.setTodoComplete(id, nextFlag);
-            }
-            refreshAll();
-          };
-
-          // 2. 휴지통 버튼 클릭 시 삭제(flag=3)
-          const delBtn = card.querySelector('.delete-icon-btn');
-          if (delBtn) {
-            delBtn.onclick = async (e) => {
-              e.stopPropagation();
-              if (isEmail) {
-                await window.electronAPI.setMailComplete(id, 3);
-              } else {
-                await window.electronAPI.setTodoComplete(id, 3);
-              }
-              refreshAll();
-            };
-          }
-
-          // 3. 제외 버튼
-          const exBtn = card.querySelector('.exclude-btn');
-          if (exBtn) {
-            exBtn.onclick = async (e) => {
-              e.stopPropagation();
-              await window.electronAPI.excludeTodo(id);
-              refreshAll();
-            };
-          }
-        });
+    // 1. 제목 클릭 시 완료/미완료 토글
+    card.querySelector('.todo-content').onclick = async (e) => {
+      const isDone = card.classList.contains('completed');
+      const nextFlag = isDone ? 1 : 2;
+      if (isEmail) {
+        await window.electronAPI.setMailComplete(id, nextFlag);
+      } else {
+        await window.electronAPI.setTodoComplete(id, nextFlag);
       }
+      refreshAll();
+    };
 
+    // 2. 휴지통 버튼 클릭 시 삭제(flag=3)
+    const delBtn = card.querySelector('.delete-icon-btn');
+    if (delBtn) {
+      delBtn.onclick = async (e) => {
+        e.stopPropagation();
+        if (isEmail) {
+          await window.electronAPI.setMailComplete(id, 3);
+        } else {
+          await window.electronAPI.setTodoComplete(id, 3);
+        }
+        refreshAll();
+      };
+    }
+
+    // 3. [수정됨] 제외 버튼 클릭 시: 테이블 구분(isEmail) 인자를 함께 전달
+    const exBtn = card.querySelector('.exclude-btn');
+    if (exBtn) {
+      exBtn.onclick = async (e) => {
+        e.stopPropagation();
+        
+        // 두 번째 인자로 isEmail(true/false)을 넘겨주어 main.js에서 테이블을 판단하게 합니다.
+        if (confirm('이 항목을 제외하고 동일한 제목의 메일을 앞으로 차단할까요?')) {
+          await window.electronAPI.excludeTodo(id, isEmail);
+          refreshAll();
+        }
+      };
+    }
+  });
+}
       // [핵심] 전체 리스트 갱신
       async function refreshAll() {
         const userContainer = document.getElementById('todoListContainer');

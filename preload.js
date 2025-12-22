@@ -7,7 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setTodoDeadline: (id, deadline) => ipcRenderer.invoke('set-todo-deadline', id, deadline),
     setTodoComplete: (id, flag) => ipcRenderer.invoke('set-todo-complete', id, flag),
     setMailComplete: (id, flag) => ipcRenderer.invoke('set-mail-complete', id, flag),
-    excludeTodo: (id) => ipcRenderer.invoke('exclude-todo', id),
+    excludeTodo: (id, isEmail) => ipcRenderer.invoke('exclude-todo', id, isEmail),
     deleteAllTodos: () => ipcRenderer.invoke('delete-all-todos'),
     saveMemo: (id, memo) => ipcRenderer.invoke('save-memo', id, memo),
 

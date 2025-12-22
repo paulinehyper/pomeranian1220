@@ -4,6 +4,50 @@ const db = require('./db');
 const setupMailIpc = require('./mail'); // mail.js 모듈 로드
 
 /**
+ * [추가] 텍스트에서 날짜(MM/DD, MM.DD)를 추출하여 YYYY-MM-DD 형식으로 변환
+ */
+/**
+ * [수정] 날짜 추출 함수: 더 다양한 패턴 인식 및 정확한 연도 계산
+ */
+function extractDeadlineDate(text) {
+  if (!text) return null;
+
+  // 정규식 보강: 숫자/숫자 또는 숫자.숫자 (예: 12/30, 1.15, 05/02 등)
+  // \b를 사용하여 다른 숫자와 섞이지 않도록 함
+  const dateRegex = /\b(\d{1,2})[\/.](\d{1,2})\b/;
+  const match = text.match(dateRegex);
+
+  if (match) {
+    let month = parseInt(match[1]);
+    let day = parseInt(match[2]);
+
+    // 월/일 유효성 체크 (예: 13월 40일 방지)
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    
+    // 올해 기준으로 날짜 설정
+    let targetDate = new Date(currentYear, month - 1, day);
+
+    // [로직] 오늘보다 이미 지난 날짜라면 (예: 오늘 12/22인데 메일에 1/15가 있으면) 내년으로 설정
+    // 00:00:00 기준으로 비교하기 위해 시간을 초기화합니다.
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (targetDate < today) {
+      targetDate.setFullYear(currentYear + 1);
+    }
+
+    const yyyy = targetDate.getFullYear();
+    const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(targetDate.getDate()).padStart(2, '0');
+
+    console.log(`[날짜 인식 성공] 추출된 텍스트: ${match[0]} -> 변환: ${yyyy}-${mm}-${dd}`);
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return null;
+}
+
+/**
  * 전역 변수 및 설정
  */
 let mainWindow = null;
@@ -116,15 +160,37 @@ ipcMain.handle('set-todo-complete', (event, id, flag) => {
   return { success: true };
 });
 
-// 제외 처리 (키워드 자동 등록 포함)
-ipcMain.handle('exclude-todo', (event, id) => {
-  const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(id);
-  if (todo && todo.task) {
-    try { db.prepare('INSERT OR IGNORE INTO keywords (word, type) VALUES (?, ?)').run(todo.task, 'exclude'); } catch (e) {}
+// [main.js] exclude-todo 핸들러 수정
+// [main.js] 이 부분을 찾아 교체하세요
+ipcMain.handle('exclude-todo', (event, id, isEmail) => { // id와 isEmail 두 개를 받아야 합니다.
+  try {
+    let titleToExclude = "";
+    
+    if (isEmail) {
+      const email = db.prepare('SELECT subject FROM emails WHERE id = ?').get(id);
+      if (email) {
+        titleToExclude = email.subject;
+        db.prepare('UPDATE emails SET todo_flag = 0 WHERE id = ?').run(id);
+      }
+    } else {
+      const todo = db.prepare('SELECT task FROM todos WHERE id = ?').get(id);
+      if (todo) {
+        titleToExclude = todo.task;
+        db.prepare('UPDATE todos SET todo_flag = 0 WHERE id = ?').run(id);
+      }
+    }
+
+    if (titleToExclude) {
+      db.prepare('INSERT OR IGNORE INTO keywords (word, type) VALUES (?, ?)')
+        .run(titleToExclude, 'exclude');
+    }
+
+    notifyRefresh();
+    return { success: true };
+  } catch (err) {
+    console.error("Exclude Error:", err);
+    return { success: false };
   }
-  db.prepare('UPDATE todos SET todo_flag = 0 WHERE id = ?').run(id);
-  notifyRefresh();
-  return { success: true };
 });
 
 // 키워드 관리
@@ -212,17 +278,38 @@ async function syncMail() {
     const row = db.prepare('SELECT * FROM mail_settings WHERE id=1').get();
     if (row && row.mail_id && row.mail_pw) {
       const mailModule = require('./mail');
-      const lastEmail = db.prepare('SELECT id FROM emails ORDER BY id DESC LIMIT 1').get();
+      // 메일 서버와 동기화 실행
       await mailModule.syncMail(row);
-      
-      notifyRefresh();
-      
-      const newEmails = lastEmail ? db.prepare('SELECT * FROM emails WHERE id > ?').all(lastEmail.id) : [];
-      if (newEmails.length > 0 && tray) {
-        newEmails.forEach((m, i) => setTimeout(() => global.showTrayPopup(m), i * 3000));
+
+      // [핵심 수정] 
+      // deadline이 아직 없는 메일들만 골라서 다시 한번 날짜 분석을 수행합니다.
+      const pendingEmails = db.prepare("SELECT * FROM emails WHERE (deadline IS NULL OR deadline = '' OR deadline = '없음') AND todo_flag IN (1,2)").all();
+
+      if (pendingEmails.length > 0) {
+        const updateStmt = db.prepare('UPDATE emails SET deadline = ? WHERE id = ?');
+        // 데이터베이스 트랜잭션으로 처리하여 성능 향상
+        const updateTransaction = db.transaction((emails) => {
+          for (const email of emails) {
+            const detected = extractDeadlineDate(email.subject) || extractDeadlineDate(email.body);
+            if (detected) {
+              updateStmt.run(detected, email.id);
+            }
+          }
+        });
+        updateTransaction(pendingEmails);
+        console.log(`[분석 완료] ${pendingEmails.length}개의 메일 날짜 재검토 완료`);
+      }
+
+      notifyRefresh(); // UI 갱신 신호 발송
+      // 새 메일 알림 (최근 10초 내 추가된 것만)
+      const freshEmails = db.prepare("SELECT * FROM emails WHERE created_at >= datetime('now', '-10 seconds')").all();
+      if (freshEmails.length > 0 && tray) {
+        freshEmails.forEach((m, i) => setTimeout(() => global.showTrayPopup(m), i * 3000));
       }
     }
-  } catch (err) { console.error("Sync Error:", err); }
+  } catch (err) { 
+    console.error("Sync Error:", err); 
+  }
 }
 
 /**

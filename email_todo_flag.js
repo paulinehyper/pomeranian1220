@@ -111,8 +111,8 @@ function extractDeadlineDate(str) {
       if (candidate < new Date().setHours(0, 0, 0, 0)) year += 1;
       return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     }
-    // 기존 M/D, M.D, M-D 패턴
-    const monthDayMatch = str.match(/(\d{1,2})[\/.\-](\d{1,2})/);
+    // 문장 중간, 한글과 붙은 날짜도 인식 (예: 12/1까지, 12.1까지, 12-1까지)
+    const monthDayMatch = str.match(/(?:^|\D)(\d{1,2})[\/\.\-](\d{1,2})(?=\D|$)/);
     if (monthDayMatch) {
       const month = parseInt(monthDayMatch[1], 10);
       const day = parseInt(monthDayMatch[2], 10);
