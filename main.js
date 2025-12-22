@@ -1,14 +1,16 @@
 // delemail 테이블 생성 (없으면)
 try {
-  db.exec(`CREATE TABLE IF NOT EXISTS delemail (
+  db.prepare(`CREATE TABLE IF NOT EXISTS delemail (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    received_at TEXT,
     subject TEXT,
     body TEXT,
     from_addr TEXT,
-    received_at TEXT,
-    memo TEXT,
-    deadline TEXT
-  )`);
+    todo_flag INTEGER,
+    unique_hash TEXT,
+    deadline TEXT,
+    created_at TEXT
+  )`).run();
 } catch (e) {}
 
 // emails 테이블에서 할일 분류된 것 todos로, 아닌 것 delemail로 옮기는 함수
