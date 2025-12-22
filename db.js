@@ -32,6 +32,16 @@ try {
 } catch (e) {
   console.error("인덱스 생성 에러:", e.message);
 }
+// emails 테이블에 is_notified 컬럼이 없으면 추가
+try {
+  const col = db.prepare("PRAGMA table_info(emails)").all();
+  if (!col.some(c => c.name === 'is_notified')) {
+    db.exec(`ALTER TABLE emails ADD COLUMN is_notified INTEGER DEFAULT 0`);
+    console.log('is_notified 컬럼 추가 완료');
+  }
+} catch (e) {
+  console.error('is_notified 컬럼 추가 에러:', e.message);
+}
 
 // --- 초기 테이블 생성 및 마이그레이션 ---
 
