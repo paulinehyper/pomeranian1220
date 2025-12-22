@@ -147,11 +147,13 @@ ipcMain.handle('insert-todo', (event, { task, deadline, memo }) => {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       ddayValue = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
     }
-    db.prepare(`INSERT INTO todos (date, task, memo, deadline, dday, todo_flag) VALUES (?, ?, ?, ?, ?, 1)`)
-      .run(dateStr, task, memo || '', deadline || '', ddayValue);
+    // '광고' 키워드가 task 또는 memo에 포함되면 todo_flag=0(제외)로 등록
+    const isAd = (task && task.includes('광고')) || (memo && memo.includes('광고'));
+    db.prepare(`INSERT INTO todos (date, task, memo, deadline, dday, todo_flag) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(dateStr, task, memo || '', deadline || '', ddayValue, isAd ? 0 : 1);
 
-    // 트레이 팝업 알림 (할일카드 추가 시)
-    if (tray && global.showTrayPopup) {
+    // 트레이 팝업 알림 (할일카드 추가 시, 광고 제외는 알림X)
+    if (!isAd && tray && global.showTrayPopup) {
       global.showTrayPopup({ subject: `[할일 추가] ${task}` });
     }
 
