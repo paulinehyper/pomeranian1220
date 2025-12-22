@@ -1,3 +1,18 @@
+// emails 테이블에 subject+received_at 해시 컬럼(email_hash) 추가 및 UNIQUE 인덱스 생성 (이미 있으면 패스)
+try {
+  db.exec(`ALTER TABLE emails ADD COLUMN email_hash TEXT`);
+} catch (e) {}
+try {
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emails_email_hash ON emails (email_hash)`);
+} catch (e) {
+  console.error("emails 인덱스 생성 에러:", e.message);
+}
+// todos.email_hash에 UNIQUE 인덱스 추가 (이미 있으면 패스)
+try {
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_todos_email_hash ON todos (email_hash)`);
+} catch (e) {
+  console.error("인덱스 생성 에러:", e.message);
+}
 
 const Database = require('better-sqlite3');
 const path = require('path');

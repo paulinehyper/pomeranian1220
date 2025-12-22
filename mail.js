@@ -161,8 +161,10 @@ function setupMailIpc(main) {
           }
           if (!exists.get(hash).cnt) {
             const createdAt = info.mailSince || new Date().toISOString();
-            db.prepare('INSERT INTO emails (received_at, subject, body, from_addr, todo_flag, unique_hash, deadline, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-              .run(date, subject, body, from, todoFlag, hash, extractDeadline(body), createdAt);
+            // subject+received_at 해시 생성
+            const emailHash = require('crypto').createHash('sha256').update((date||'') + (subject||'')).digest('hex');
+            db.prepare('INSERT INTO emails (received_at, subject, body, from_addr, todo_flag, unique_hash, deadline, created_at, email_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+              .run(date, subject, body, from, todoFlag, hash, extractDeadline(body), createdAt, emailHash);
           }
         } catch (e) { /* 무시 */ }
       }
