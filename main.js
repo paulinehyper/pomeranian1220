@@ -267,6 +267,9 @@ function createWindow() {
     }
   });
   mainWindow.loadFile('main.html');
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
 }
 
 async function syncMail() {
@@ -278,7 +281,12 @@ async function syncMail() {
         // 동기화 전 emails 테이블의 최신 메일 id 저장
         const lastEmail = db.prepare('SELECT id FROM emails ORDER BY id DESC LIMIT 1').get();
         await mailModule.syncMail(row);
-        if (mainWindow) mainWindow.webContents.send('mail-sync-complete');
+        // 창이 없거나 파괴된 경우 UI 업데이트를 건너뜀
+        if (!mainWindow || mainWindow.isDestroyed()) {
+          console.log('메인 창이 없으므로 UI 업데이트를 건너뜁니다.');
+          return;
+        }
+        mainWindow.webContents.send('mail-sync-complete');
         // 동기화 후 새로 들어온 모든 메일에 대해 알림
         const newEmails = lastEmail && lastEmail.id
           ? db.prepare('SELECT subject, from_addr, received_at FROM emails WHERE id > ? ORDER BY id ASC').all(lastEmail.id)
@@ -340,10 +348,22 @@ app.whenReady().then(() => {
   // 트레이 설정
   tray = new Tray(iconPath);
   tray.setToolTip('할일 위젯');
-  tray.setContextMenu(Menu.buildFromTemplate([
-    { label: '열기', click: () => { if (mainWindow) mainWindow.show(); } },
-    { label: '종료', click: () => app.quit() }
-  ]));
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '열기',
+      click: () => {
+        if (mainWindow === null) {
+          createWindow();
+        } else {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.focus();
+          mainWindow.show();
+        }
+      }
+    },
+    { label: '종료', role: 'quit' }
+  ]);
+  tray.setContextMenu(contextMenu);
 
   // 주기적 메일 분석 및 동기화 (1분마다)
   setInterval(async () => {
@@ -367,5 +387,8 @@ process.on('uncaughtException', (err) => {
 });
 
 app.on('window-all-closed', (e) => {
-  if (process.platform !== 'darwin') app.quit();
+  // 창이 모두 닫혀도 앱을 종료하지 않음(트레이에서 계속 동작)
+  // 단, Mac에서는 기존 동작 유지
+  if (process.platform === 'darwin') app.quit();
+  // Windows 등에서는 아무 동작도 하지 않음
 });
