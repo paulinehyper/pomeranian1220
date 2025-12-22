@@ -4,8 +4,8 @@
 const db = require('./db');
 
 const TODO_KEYWORDS = [
-  '할일', '제출', '제출기한', '마감', '기한', '검토', '확인', '필수', '요청', '과제', '숙제', 'deadline', 'due', 'todo', 'assignment', 'report',
-  '회신', '언제까지'
+  '할일', '제출', '제출기한', '마감', '기한', '검토', '확인', '필수', '요청', '요구', '청구', '협조', '회신', '답장', '작성', '기재',
+  '과제', '숙제', 'deadline', 'due', 'todo', 'assignment', 'report', '언제까지'
 ];
 // 날짜 표현(몇월 몇일까지, yyyy년 mm월 dd일까지 등) 정규식
 const DEADLINE_PATTERNS = [
@@ -39,9 +39,13 @@ function markTodoEmails() {
   const update = db.prepare('UPDATE emails SET todo_flag = 1 WHERE id = ?');
   for (const mail of emails) {
     const text = (mail.subject + ' ' + (mail.body || '')).toLowerCase();
-    // 키워드가 본문에 하나라도 있으면 todo로 분류
+    // 요청/요구/청구/협조/제출/회신/답장/작성/기재 등 행위 키워드가 포함된 경우만 todo로 분류
+    const actionKeywords = [
+      '요청', '요구', '청구', '협조', '제출', '회신', '답장', '작성', '기재'
+    ];
+    const hasAction = actionKeywords.some(k => text.includes(k));
     const hasTodoKeyword = keywords.some(k => k && text.includes(k.toLowerCase()));
-    if (hasTodoKeyword) {
+    if (hasAction && hasTodoKeyword) {
       update.run(mail.id);
     }
   }
