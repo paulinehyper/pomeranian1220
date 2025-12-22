@@ -131,7 +131,12 @@ ipcMain.handle('insert-todo', (event, { task, deadline, memo }) => {
     }
     db.prepare(`INSERT INTO todos (date, task, memo, deadline, dday, todo_flag) VALUES (?, ?, ?, ?, ?, 1)`)
       .run(dateStr, task, memo || '', deadline || '', ddayValue);
-    
+
+    // 트레이 팝업 알림 (할일카드 추가 시)
+    if (tray && global.showTrayPopup) {
+      global.showTrayPopup({ subject: `[할일 추가] ${task}` });
+    }
+
     notifyRefresh(); // 실시간 갱신 신호
     return { success: true };
   } catch (err) { return { success: false, error: err.message }; }
@@ -281,7 +286,6 @@ async function syncMail() {
       // 메일 서버와 동기화 실행
       await mailModule.syncMail(row);
 
-      // [핵심 수정] 
       // deadline이 아직 없는 메일들만 골라서 다시 한번 날짜 분석을 수행합니다.
       const pendingEmails = db.prepare("SELECT * FROM emails WHERE (deadline IS NULL OR deadline = '' OR deadline = '없음') AND todo_flag IN (1,2)").all();
 
@@ -301,10 +305,16 @@ async function syncMail() {
       }
 
       notifyRefresh(); // UI 갱신 신호 발송
-      // 새 메일 알림 (최근 10초 내 추가된 것만)
-      const freshEmails = db.prepare("SELECT * FROM emails WHERE created_at >= datetime('now', '-10 seconds')").all();
+      // [수정] 알림을 보내지 않은 메일만 선택
+      const freshEmails = db.prepare("SELECT * FROM emails WHERE is_notified = 0 AND todo_flag IN (1,2)").all();
       if (freshEmails.length > 0 && tray) {
-        freshEmails.forEach((m, i) => setTimeout(() => global.showTrayPopup(m), i * 3000));
+        const updateStmt = db.prepare('UPDATE emails SET is_notified = 1 WHERE id = ?');
+        freshEmails.forEach((m, i) => {
+          setTimeout(() => {
+            global.showTrayPopup(m);
+            updateStmt.run(m.id);
+          }, i * 3000);
+        });
       }
     }
   } catch (err) { 
@@ -328,10 +338,16 @@ app.whenReady().then(() => {
 
   // 토스트 팝업 함수
   global.showTrayPopup = function(email) {
+    // todo_flag: 1(미완료), 2(완료) => 이메일 할일로 분류된 메일
+    const isEmailTodo = email.todo_flag === 1 || email.todo_flag === 2;
+    const bgColor = isEmailTodo ? 'linear-gradient(90deg,#fff700 0%,#ffe98a 100%)' : 'rgba(0,180,154,0.95)';
+    const title = isEmailTodo ? '이메일 할일' : '새 메일';
+    // 제목에 [이메일 할일] 표시
+    const subject = isEmailTodo ? `[이메일 할일] ${email.subject}` : email.subject;
     const popup = new BrowserWindow({ width: 320, height: 90, frame: false, alwaysOnTop: true, skipTaskbar: true, transparent: true, show: false, webPreferences: { contextIsolation: true } });
     const b = tray.getBounds();
     popup.setPosition(b.x - 120, b.y - 100);
-    popup.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(`<body style="margin:0;padding:15px;background:rgba(0,180,154,0.95);color:#fff;border-radius:10px;font-family:sans-serif;overflow:hidden;"><b>새 메일</b><br><div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${email.subject}</div></body>`));
+    popup.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(`<body style="margin:0;padding:15px;background:${bgColor};color:#222;border-radius:10px;font-family:sans-serif;overflow:hidden;"><b>${title}</b><br><div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${subject}</div></body>`));
     popup.once('ready-to-show', () => popup.show());
     setTimeout(() => { if (!popup.isDestroyed()) popup.close(); }, 3500);
   };
