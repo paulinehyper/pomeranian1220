@@ -97,6 +97,7 @@ addColumn('todos', 'deadline', 'TEXT');
 addColumn('todos', 'todo_flag', 'INTEGER DEFAULT 1');
 addColumn('todos', 'mail_flag', 'TEXT');
 addColumn('delemail', 'memo', 'TEXT'); // 이전에 에러 났던 부분
+addColumn('delemail', 'deadline', 'TEXT'); // 마감기한 컬럼 추가
 
 // --- 초기 데이터 삽입 ---
 db.prepare('INSERT OR IGNORE INTO autoplay (id, enabled) VALUES (1, 0)').run();
