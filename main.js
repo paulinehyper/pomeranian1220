@@ -194,7 +194,7 @@ ipcMain.handle('exclude-todo', (event, id, isEmail) => { // id와 isEmail 두 �
 });
 
 // 키워드 관리
-ipcMain.handle('get-keywords', () => db.prepare("SELECT id, word FROM keywords").all());
+ipcMain.handle('get-keywords', () => db.prepare("SELECT id, word, type FROM keywords").all());
 ipcMain.handle('insert-keyword', (event, keyword) => {
   try {
     db.prepare('INSERT INTO keywords (word) VALUES (?)').run(keyword);
