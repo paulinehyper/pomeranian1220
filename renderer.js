@@ -137,6 +137,11 @@ function renderList(todos) {
       today.setHours(0,0,0,0);
       deadlineDate.setHours(0,0,0,0);
       if (deadlineDate <= today) isUrgent = true;
+    } else {
+      // 마감 없음: 직접 입력할 수 있는 input/date 버튼 추가
+      deadlineHtml = `<span class="deadline" style="color:#888;font-weight:bold;margin-right:6px;">마감: 없음</span>
+        <input type="date" class="set-deadline-input" style="margin-left:4px;vertical-align:middle;" />
+        <button class="set-deadline-btn" style="margin-left:2px;vertical-align:middle;">저장</button>`;
     }
     const isMail = typeof item.id === 'string' && item.id.startsWith('mail-');
     const isCompleted = item.todo_flag === 2;
@@ -167,6 +172,26 @@ function renderList(todos) {
         </svg>
       </button>
     `;
+        // 마감 없음 입력창 이벤트 바인딩
+        if (!item.deadline || item.deadline === '없음' || item.deadline === item.date) {
+          const dateInput = li.querySelector('.set-deadline-input');
+          const saveBtn = li.querySelector('.set-deadline-btn');
+          if (dateInput && saveBtn) {
+            saveBtn.onclick = async () => {
+              const newDeadline = dateInput.value;
+              if (newDeadline) {
+                if (typeof item.id === 'string' && item.id.startsWith('mail-')) {
+                  await window.electronAPI.setEmailDeadline(item.id.replace('mail-', ''), newDeadline);
+                } else if (window.electronAPI.setTodoDeadline) {
+                  await window.electronAPI.setTodoDeadline(item.id, newDeadline);
+                }
+                // 저장 후 목록 새로고침
+                const todos = await fetchTodos();
+                renderList(todos);
+              }
+            };
+          }
+        }
     if (isUrgent) li.classList.add('urgent-blink');
         // 할일 제목 클릭 시 취소선 토글
         const taskSpan = li.querySelector('.task');

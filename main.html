@@ -118,6 +118,13 @@
           container.innerHTML = (todos && todos.length) ? todos.map(t => {
             const dday = t.deadline ? getDDay(t.deadline) : null;
             const isDone = Number(t.todo_flag) === 2;
+            // 마감 없음이면 클릭시 date input 노출
+            let deadlineHtml = '';
+            if (!t.deadline || t.deadline === '없음') {
+              deadlineHtml = `<span class="todo-date no-deadline" style="cursor:pointer;color:#888;text-decoration:underline;">마감: 없음</span> <input type="date" class="set-deadline-input" style="display:none;margin-left:6px;vertical-align:middle;" /> <button class="set-deadline-btn" style="display:none;margin-left:2px;vertical-align:middle;">저장</button>`;
+            } else {
+              deadlineHtml = `<span class="todo-date">마감: ${t.deadline}</span>`;
+            }
             return `
               <div class="todo-card${isDone ? ' completed' : ''}" data-id="${t.id}">
                 <div class="todo-top">
@@ -134,10 +141,35 @@
                   <button class="exclude-btn" style="background:#fff;border:1.5px solid #00b49a;color:#00b49a;border-radius:6px;padding:2px 10px;margin-left:8px;cursor:pointer;font-size:0.95em;">제외</button>
                 </div>
                 <div class="todo-bottom">
-                  <span class="todo-date">${t.deadline ? '마감: ' + t.deadline : '기한 없음'}</span>
+                  ${deadlineHtml}
                 </div>
               </div>`;
           }).join('') : '<p style="text-align:center;color:#bbb;padding-top:20px;">할일이 없습니다.</p>';
+          // 마감 없음 클릭시 date input 팝업 및 저장
+          document.querySelectorAll('.no-deadline').forEach(span => {
+            span.onclick = function() {
+              const parent = span.parentElement;
+              const input = parent.querySelector('.set-deadline-input');
+              const btn = parent.querySelector('.set-deadline-btn');
+              if (input && btn) {
+                input.style.display = 'inline-block';
+                btn.style.display = 'inline-block';
+                input.focus();
+                span.style.display = 'none';
+                btn.onclick = async () => {
+                  const newDeadline = input.value;
+                  if (newDeadline) {
+                    const card = parent.closest('.todo-card');
+                    const id = card.getAttribute('data-id');
+                    if (window.electronAPI.setTodoDeadline) {
+                      await window.electronAPI.setTodoDeadline(Number(id), newDeadline);
+                      await refreshTodos();
+                    }
+                  }
+                };
+              }
+            };
+          });
 
           // 클릭 이벤트 로직 수정: 완료 상태에서 클릭 시 미완료로, 미완료에서 클릭 시 완료로
           document.querySelectorAll('.todo-card').forEach(card => {

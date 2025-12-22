@@ -101,14 +101,25 @@ function addTodosFromEmailTodos() {
 function extractDeadlineDate(str) {
   if (!str) return null;
   const thisYear = new Date().getFullYear();
-  const monthDayMatch = str.match(/(\d{1,2})[\/.\-](\d{1,2})/);
-  if (monthDayMatch) {
-    const month = parseInt(monthDayMatch[1], 10);
-    const day = parseInt(monthDayMatch[2], 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${thisYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    // 괄호 안 (M/D), (M.D), (M-D) 패턴 우선 추출
+    const parenDateMatch = str.match(/\((\d{1,2})[\/\.\-](\d{1,2})\)/);
+    if (parenDateMatch) {
+      const month = parseInt(parenDateMatch[1], 10);
+      const day = parseInt(parenDateMatch[2], 10);
+      let year = new Date().getFullYear();
+      const candidate = new Date(year, month - 1, day);
+      if (candidate < new Date().setHours(0, 0, 0, 0)) year += 1;
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     }
-  }
+    // 기존 M/D, M.D, M-D 패턴
+    const monthDayMatch = str.match(/(\d{1,2})[\/.\-](\d{1,2})/);
+    if (monthDayMatch) {
+      const month = parseInt(monthDayMatch[1], 10);
+      const day = parseInt(monthDayMatch[2], 10);
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        return `${thisYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
+    }
   return null;
 }
 

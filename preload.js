@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 
 contextBridge.exposeInMainWorld('electronAPI', {
+        setTodoDeadline: (id, deadline) => ipcRenderer.invoke('set-todo-deadline', id, deadline),
       setTodoComplete: (id, flag) => ipcRenderer.invoke('set-todo-complete', id, flag),
     addTodoFromMail: (mailId) => ipcRenderer.invoke('add-todo-from-mail', mailId),
   minimize: () => ipcRenderer.send('minimize'),

@@ -1,3 +1,33 @@
+
+
+const { app, BrowserWindow, ipcMain, Tray, Menu, dialog } = require('electron');
+const path = require('path');
+const crypto = require('crypto');
+const fs = require('fs');
+const autoLauncher = require('./auto-launch');
+const db = require('./db');
+const { addTodosFromEmailTodos } = require('./email_todo_flag');
+const setupMailIpc = require('./mail'); // mail.js 모듈 로드
+
+// 마감일 직접 입력 IPC
+ipcMain.handle('set-todo-deadline', (event, id, deadline) => {
+  try {
+    // dday 계산
+    let ddayValue = 0;
+    if (deadline) {
+      const now = new Date();
+      const target = new Date(deadline);
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const diffTime = target - today;
+      ddayValue = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+    db.prepare('UPDATE todos SET deadline = ?, dday = ? WHERE id = ?').run(deadline, ddayValue, id);
+    return { success: true };
+  } catch (err) {
+    console.error('set-todo-deadline error:', err);
+    return { success: false, error: err.message };
+  }
+});
 // delemail 테이블 생성 (없으면)
 try {
   db.prepare(`CREATE TABLE IF NOT EXISTS delemail (
@@ -42,15 +72,6 @@ async function moveEmailTodos() {
     db.prepare('DELETE FROM emails WHERE id = ?').run(mail.id);
   });
 }
-
-const { app, BrowserWindow, ipcMain, Tray, Menu, dialog } = require('electron');
-const path = require('path');
-const crypto = require('crypto');
-const fs = require('fs');
-const autoLauncher = require('./auto-launch');
-const db = require('./db');
-const { addTodosFromEmailTodos } = require('./email_todo_flag');
-const setupMailIpc = require('./mail'); // mail.js 모듈 로드
 
 
 // 메일 목록 새창 오픈 (main.html에서 독립적으로)
