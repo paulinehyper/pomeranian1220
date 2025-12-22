@@ -29,7 +29,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // --- (C) 키워드 관련 (Keyword) ---
     openKeyword: () => ipcRenderer.send('open-keyword'),
     getKeywords: () => ipcRenderer.invoke('get-keywords'),
-    insertKeyword: (kw) => ipcRenderer.invoke('insert-keyword', kw),
+    insertKeyword: (word, type) => ipcRenderer.invoke('insert-keyword', { word, type }),
     updateKeyword: (oldKw, newKw) => ipcRenderer.invoke('update-keyword', oldKw, newKw),
     deleteKeyword: (kw) => ipcRenderer.invoke('delete-keyword', kw),
 

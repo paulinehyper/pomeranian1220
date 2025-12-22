@@ -222,8 +222,20 @@ ipcMain.handle('exclude-todo', (event, id, isEmail) => { // id와 isEmail 두 �
 ipcMain.handle('get-keywords', () => db.prepare("SELECT id, word, type FROM keywords").all());
 ipcMain.handle('insert-keyword', (event, keyword) => {
   try {
-    db.prepare('INSERT INTO keywords (word) VALUES (?)').run(keyword);
-    db.prepare('UPDATE emails SET todo_flag = 1 WHERE subject LIKE ?').run(`%${keyword}%`);
+    let word, type;
+    if (typeof keyword === 'object' && keyword !== null) {
+      word = keyword.word;
+      type = keyword.type || null;
+    } else {
+      word = keyword;
+      type = null;
+    }
+    if (type) {
+      db.prepare('INSERT INTO keywords (word, type) VALUES (?, ?)').run(word, type);
+    } else {
+      db.prepare('INSERT INTO keywords (word) VALUES (?)').run(word);
+    }
+    db.prepare('UPDATE emails SET todo_flag = 1 WHERE subject LIKE ?').run(`%${word}%`);
     notifyRefresh();
     return { success: true };
   } catch (err) { return { success: false }; }
