@@ -196,7 +196,13 @@
     function renderMainContent(idx) {
     let contentHtml = "";
     if (idx === 0) {
-        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🏠 홈(Home) 화면</h2><p>이곳은 홈 화면입니다.</p>`;
+      contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🏠 홈(Home) 화면</h2><ul class="schedule-list"></ul>`;
+      widgetMain.innerHTML = contentHtml;
+      // 최신 할일 목록 새로고침
+      if (window.fetchTodos && window.renderList) {
+        fetchTodos().then(window.renderList);
+      }
+      return;
     } else if (idx === 1) {
         contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🔑 키워드 관리</h2><p>여기서 키워드를 관리할 수 있습니다.</p>`;
     } else if (idx === 2) {

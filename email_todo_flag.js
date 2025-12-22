@@ -18,9 +18,16 @@ function markTodoEmails() {
   const keywords = userKeywords.length > 0 ? userKeywords : TODO_KEYWORDS;
   const emailsToMark = db.prepare('SELECT id, subject, body FROM emails WHERE todo_flag = 0').all();
   const update = db.prepare('UPDATE emails SET todo_flag = 1 WHERE id = ?');
+    const updateExclude = db.prepare('UPDATE emails SET todo_flag = 9 WHERE id = ?');
+    const excludeKeywords = db.prepare("SELECT word FROM keywords WHERE type = 'exclude'").all().map(r => r.word);
   
   for (const mail of emailsToMark) {
     const text = (mail.subject + ' ' + (mail.body || '')).toLowerCase();
+      // 제외 키워드가 포함된 경우, todo_flag=9로 변경(재분류 방지)
+      if (excludeKeywords.some(k => k && text.includes(k.toLowerCase()))) {
+        updateExclude.run(mail.id);
+        continue;
+      }
     const actionKeywords = ['요청', '요구', '청구', '협조', '제출', '회신', '답장', '작성', '기재'];
     const hasAction = actionKeywords.some(k => text.includes(k));
     const hasTodoKeyword = keywords.some(k => k && text.includes(k.toLowerCase()));
