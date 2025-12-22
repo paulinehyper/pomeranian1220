@@ -69,16 +69,59 @@ function addTodosFromEmailTodos() {
   const emails = db.prepare('SELECT id, subject, body, deadline FROM emails WHERE todo_flag = 1').all();
   const insertTodo = db.prepare('INSERT INTO todos (date, dday, task, memo, deadline, todo_flag) VALUES (?, ?, ?, ?, ?, 1)');
   const now = new Date();
+  const thisYear = now.getFullYear();
   const today = now.toISOString().slice(0, 10); // YYYY-MM-DD
+
+  // 다양한 날짜 패턴을 찾아 올해 날짜 또는 해당 날짜로 변환, 키워드와 함께 있을 때만 deadline으로 간주
+  function extractDeadlineDate(str) {
+    if (!str) return null;
+    // 본문 내 '기한:', '마감일:', '제출일:' 등과 날짜가 함께 있으면 우선적으로 deadline으로 인식
+    const deadlineLabel = /(기한|마감일|제출일)\s*[:：]?\s*([\d./월-]+)/i;
+    let m = str.match(deadlineLabel);
+    if (m) {
+      // 날짜 부분만 추출해서 재귀적으로 날짜 파싱
+      const datePart = m[2];
+      // 아래 기존 패턴 재활용
+      return extractDeadlineDate(datePart);
+    }
+    // 기존 키워드 방식
+    const keyword = /(제출|마감|기한|due|deadline|까지|limit|제출일|마감일)/i;
+    if (!keyword.test(str)) return null;
+    // (M/D) 또는 (M.D) 패턴
+    m = str.match(/\((\d{1,2})[\/.](\d{1,2})\)/);
+    if (m) {
+      const month = m[1].padStart(2, '0');
+      const day = m[2].padStart(2, '0');
+      return `${thisYear}-${month}-${day}`;
+    }
+    // 1.1 또는 1/1 또는 1월1 패턴 (공백 없이)
+    m = str.match(/(\d{1,2})[\/.월](\d{1,2})(?!\d)/);
+    if (m) {
+      const month = m[1].padStart(2, '0');
+      const day = m[2].padStart(2, '0');
+      return `${thisYear}-${month}-${day}`;
+    }
+    // YYYY-MM-DD 패턴
+    m = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (m) {
+      return `${m[1]}-${m[2]}-${m[3]}`;
+    }
+    return null;
+  }
+
   for (const mail of emails) {
     const exists = db.prepare('SELECT COUNT(*) as cnt FROM todos WHERE task = ? AND todo_flag = 1').get(mail.subject).cnt;
     if (exists === 0) {
+      // (M/D) 패턴이 subject/body에 있고, 키워드가 함께 있으면 deadline으로 사용
+      let deadline = mail.deadline || '';
+      const parsedDate = extractDeadlineDate(mail.subject) || extractDeadlineDate(mail.body);
+      if (parsedDate) deadline = parsedDate;
       insertTodo.run(
         today, // date
         '',    // dday
         mail.subject, // task
         mail.body || '', // memo
-        mail.deadline || '' // deadline
+        deadline // deadline
       );
     }
   }
