@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>Pomeranian - Main</title>
+  <title>Pomeranian</title>
   <style>
     body { margin: 0; padding: 0; background: transparent; font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif; overflow: hidden; }
     .widget-home { position: fixed; top: 40px; left: 40px; width: 520px; height: 600px; background: #f8fffd; border-radius: 18px; box-shadow: 0 4px 32px #00b49a22, 0 1.5px 0 #00b49a11; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #eef2f1; }
@@ -84,6 +84,45 @@
   </div>
 
   <script>
+
+    // ===== 무료 사용기간 만료 체크 (2026-01-03 이후 차단) =====
+    (function() {
+      const today = new Date();
+      const expireDate = new Date('2026-01-03T00:00:00+09:00');
+      if (today >= expireDate) {
+        // 만료 안내 커스텀 팝업
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.left = 0;
+        modal.style.top = 0;
+        modal.style.width = '100vw';
+        modal.style.height = '100vh';
+        modal.style.background = 'rgba(0,0,0,0.18)';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = 99999;
+        modal.innerHTML = `
+          <div style="background:#fff;padding:32px 36px;border-radius:14px;min-width:320px;max-width:90vw;box-shadow:0 4px 24px #00b49c22;display:flex;flex-direction:column;align-items:center;gap:18px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <img src='assets/icon.png' alt='앱 아이콘' style='width:32px;height:32px;vertical-align:middle;border-radius:8px;box-shadow:0 1px 4px #00b49a22;'>
+              <span style="font-weight:800;font-size:1.15em;">Pomeranian</span>
+            </div>
+            <div style="margin:12px 0 0 0;font-size:1.05em;color:#222;text-align:center;">무료 사용기간이 만료되었습니다.<br>서비스 이용을 원하시면 관리자에게 문의해 주세요.<br><br><span style='color:#ff335e;font-size:0.95em;'>만료일: 2026-01-03</span></div>
+            <div style="display:flex;gap:18px;margin-top:18px;">
+              <button id="closeExpirePopup" style="background:#00b49a;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:1em;cursor:pointer;">확인</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+        document.getElementById('closeExpirePopup').onclick = () => {
+          window.close();
+        };
+        // 주요 UI 비활성화
+        document.body.style.pointerEvents = 'none';
+        modal.style.pointerEvents = 'auto';
+      }
+    })();
     const widgetMain = document.getElementById('widgetHomeMain');
 
     // [유틸] D-Day 계산
@@ -123,7 +162,9 @@
           </div>
           <div class="todo-bottom">
             <div class="todo-info-group">
-              <span class="todo-date">${item.deadline && item.deadline !== '없음' ? '마감: ' + item.deadline : '마감 없음'}</span>
+              <span class="todo-date" data-deadline="${item.deadline || ''}" data-id="${taskId}">
+                ${item.deadline && item.deadline !== '없음' ? '마감: ' + item.deadline : '마감 없음'}
+              </span>
               ${dday && !isDone ? `<span class="d-day-badge ${dday.class}">${dday.text}</span>` : ''}
             </div>
           </div>
@@ -134,6 +175,47 @@
     function bindCardEvents(container) {
       let dragSrc = null;
       container.querySelectorAll('.todo-card').forEach(card => {
+                // 마감일 클릭시 date input으로 변경
+                const dateSpan = card.querySelector('.todo-date');
+                if (dateSpan) {
+                  dateSpan.onclick = function(e) {
+                    e.stopPropagation();
+                    if (card.classList.contains('completed')) return; // 완료된 할일은 편집 불가
+                    // 이미 input이 있으면 무시
+                    if (dateSpan.querySelector('input')) return;
+                    const oldDeadline = dateSpan.getAttribute('data-deadline');
+                    const id = dateSpan.getAttribute('data-id');
+                    // input 생성
+                    const input = document.createElement('input');
+                    input.type = 'date';
+                    input.className = 'date-input';
+                    input.style.marginLeft = '6px';
+                    input.value = oldDeadline && oldDeadline !== '없음' ? oldDeadline : '';
+                    dateSpan.innerHTML = '마감:';
+                    dateSpan.appendChild(input);
+                    input.focus();
+                    input.onblur = async function() {
+                      const newVal = input.value;
+                      if (newVal && newVal !== oldDeadline) {
+                        if (card.getAttribute('data-is-email') === 'true') {
+                          await window.electronAPI.setEmailDeadline(id, newVal);
+                        } else {
+                          await window.electronAPI.setTodoDeadline(Number(id), newVal);
+                        }
+                        refreshAll();
+                      } else {
+                        dateSpan.innerHTML = oldDeadline && oldDeadline !== '없음' ? '마감: ' + oldDeadline : '마감 없음';
+                      }
+                    };
+                    input.onkeydown = async function(ev) {
+                      if (ev.key === 'Enter') {
+                        input.blur();
+                      } else if (ev.key === 'Escape') {
+                        dateSpan.innerHTML = oldDeadline && oldDeadline !== '없음' ? '마감: ' + oldDeadline : '마감 없음';
+                      }
+                    };
+                  };
+                }
         const id = Number(card.getAttribute('data-id'));
         const isEmail = card.getAttribute('data-is-email') === 'true';
 
@@ -571,7 +653,32 @@ async function renderKeywordPage() {
         try {
           const result = await window.electronAPI.mailConnect(info);
           if(result && result.success) {
-            alert('메일 연동 성공!');
+            // 커스텀 팝업: Pomeranian 제목, 아이콘 적용
+            const modal = document.createElement('div');
+            modal.style.position = 'fixed';
+            modal.style.left = 0;
+            modal.style.top = 0;
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.background = 'rgba(0,0,0,0.18)';
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.zIndex = 9999;
+            modal.innerHTML = `
+              <div style="background:#fff;padding:32px 36px;border-radius:14px;min-width:320px;max-width:90vw;box-shadow:0 4px 24px #00b49c22;display:flex;flex-direction:column;align-items:center;gap:18px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <img src='assets/icon.png' alt='앱 아이콘' style='width:32px;height:32px;vertical-align:middle;border-radius:8px;box-shadow:0 1px 4px #00b49a22;'>
+                  <span style="font-weight:800;font-size:1.15em;">Pomeranian</span>
+                </div>
+                <div style="margin:12px 0 0 0;font-size:1.05em;color:#222;text-align:center;">메일 연동 성공!</div>
+                <div style="display:flex;gap:18px;margin-top:18px;">
+                  <button id="closeSuccessPopup" style="background:#00b49a;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:1em;cursor:pointer;">확인</button>
+                </div>
+              </div>
+            `;
+            document.body.appendChild(modal);
+            document.getElementById('closeSuccessPopup').onclick = () => modal.remove();
             // 3. 저장 후 DB에서 다시 불러와 input에 반영
             const settings = await window.electronAPI.getMailSettings();
             if (settings) {

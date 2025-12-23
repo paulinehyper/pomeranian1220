@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getTodos: (all) => ipcRenderer.invoke('get-todos', all),
     insertTodo: (todo) => ipcRenderer.invoke('insert-todo', todo),
     setTodoDeadline: (id, deadline) => ipcRenderer.invoke('set-todo-deadline', id, deadline),
+    setEmailDeadline: (id, deadline) => ipcRenderer.invoke('set-email-deadline', id, deadline),
     setTodoComplete: (id, flag) => ipcRenderer.invoke('set-todo-complete', id, flag),
     setMailComplete: (id, flag) => ipcRenderer.invoke('set-mail-complete', id, flag),
     excludeTodo: (id, isEmail) => ipcRenderer.invoke('exclude-todo', id, isEmail),

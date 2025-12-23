@@ -1,5 +1,5 @@
 {
-  "name": "schedule-widget",
+  "name": "Pomeranian",
   "version": "1.0.0",
   "description": "윈도우 스티커 메모장 스타일의 Electron 스케줄 위젯",
   "main": "main.js",
@@ -10,8 +10,8 @@
   "author": "",
   "license": "MIT",
   "build": {
-    "appId": "com.pomeranianelect1212.schedulewidget",
-    "productName": "PomeranianElect1212",
+    "appId": "com.pomeranian.schedulewidget",
+    "productName": "Pomeranian",
     "directories": {
       "output": "dist"
     },

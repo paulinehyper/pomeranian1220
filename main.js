@@ -1,8 +1,16 @@
+
 const { app, BrowserWindow, ipcMain, Tray, Menu, dialog } = require('electron');
 const path = require('path');
 const db = require('./db');
 const setupMailIpc = require('./mail'); // mail.js 모듈 로드
 
+
+// 이메일 할일 마감일 저장 IPC
+ipcMain.handle('set-email-deadline', (event, id, deadline) => {
+  // emails 테이블의 deadline 필드 업데이트
+  db.prepare('UPDATE emails SET deadline = ? WHERE id = ?').run(deadline, id);
+  return true;
+});
 /**
  * [추가] 텍스트에서 날짜(MM/DD, MM.DD)를 추출하여 YYYY-MM-DD 형식으로 변환
  */

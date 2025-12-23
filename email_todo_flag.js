@@ -19,19 +19,29 @@ function markTodoEmails() {
   const emailsToMark = db.prepare('SELECT id, subject, body FROM emails WHERE todo_flag = 0').all();
   const update = db.prepare('UPDATE emails SET todo_flag = 1 WHERE id = ?');
     const updateExclude = db.prepare('UPDATE emails SET todo_flag = 9 WHERE id = ?');
-    const excludeKeywords = db.prepare("SELECT word FROM keywords WHERE type = 'exclude'").all().map(r => r.word);
+    let excludeKeywords = db.prepare("SELECT word FROM keywords WHERE type = 'exclude'").all().map(r => r.word);
+    // excludeKeywords가 "회의,광고" 같은 문자열로 들어올 경우 배열로 변환
+    if (excludeKeywords.length === 1 && typeof excludeKeywords[0] === 'string' && excludeKeywords[0].includes(',')) {
+      excludeKeywords = excludeKeywords[0].split(',').map(k => k.trim()).filter(Boolean);
+    }
+    // 제외된 이메일 제목 목록 가져오기
+    const excludedSubjects = db.prepare('SELECT subject FROM emails WHERE todo_flag = 9').all().map(r => r.subject).filter(Boolean);
   
   for (const mail of emailsToMark) {
-    const text = (mail.subject + ' ' + (mail.body || '')).toLowerCase();
-      // 제외 키워드가 포함된 경우, todo_flag=9로 변경(재분류 방지)
-      if (excludeKeywords.some(k => k && text.includes(k.toLowerCase()))) {
-        updateExclude.run(mail.id);
-        continue;
-      }
+    const subjectText = (mail.subject || '').toLowerCase();
+    // 1. 제외 키워드가 포함된 경우
+    if (excludeKeywords.some(k => k && subjectText.includes(k.toLowerCase()))) {
+      updateExclude.run(mail.id);
+      continue;
+    }
+    // 2. 제외된 이메일 제목과 유사한 경우(유사도 0.8 이상)
+    if (excludedSubjects.some(exSubj => similarity(subjectText, (exSubj || '').toLowerCase()) >= 0.8)) {
+      updateExclude.run(mail.id);
+      continue;
+    }
     const actionKeywords = ['요청', '요구', '청구', '협조', '제출', '회신', '답장', '작성', '기재'];
-    const hasAction = actionKeywords.some(k => text.includes(k));
-    const hasTodoKeyword = keywords.some(k => k && text.includes(k.toLowerCase()));
-    
+    const hasAction = actionKeywords.some(k => subjectText.includes(k));
+    const hasTodoKeyword = keywords.some(k => k && subjectText.includes(k.toLowerCase()));
     if (hasAction || hasTodoKeyword) {
       update.run(mail.id);
     }
@@ -41,10 +51,15 @@ function markTodoEmails() {
 function addTodosFromEmailTodos() {
   try {
     const deletedMails = db.prepare('SELECT subject FROM delemail').all();
-    const excludeKeywords = db.prepare("SELECT word FROM keywords WHERE type = 'exclude'").all().map(r => r.word);
+    let excludeKeywords = db.prepare("SELECT word FROM keywords WHERE type = 'exclude'").all().map(r => r.word);
+    if (excludeKeywords.length === 1 && typeof excludeKeywords[0] === 'string' && excludeKeywords[0].includes(',')) {
+      excludeKeywords = excludeKeywords[0].split(',').map(k => k.trim()).filter(Boolean);
+    }
     
     // 1. 변환 대기 중인(todo_flag = 1) 메일만 가져옴
     const targetEmails = db.prepare('SELECT id, subject, body, deadline, received_at FROM emails WHERE todo_flag = 1').all();
+    // todo_flag=9(제외)된 이메일 제목 목록
+    const excludedSubjects = db.prepare('SELECT subject FROM emails WHERE todo_flag = 9').all().map(r => r.subject).filter(Boolean);
     
     const insertTodo = db.prepare(`
       INSERT OR IGNORE INTO todos (date, dday, task, memo, deadline, todo_flag, email_hash) 
@@ -58,8 +73,14 @@ function addTodosFromEmailTodos() {
     const today = new Date().toISOString().slice(0, 10);
 
     for (const mail of targetEmails) {
-      // 한번이라도 delemail로 이동된(제외된) 제목은 다시 todos로 분류하지 않음
+
+      // 1. delemail로 이동된(제외된) 제목은 다시 todos로 분류하지 않음
       if (deletedMails.some(dm => dm.subject && mail.subject && normalize(dm.subject) === normalize(mail.subject))) {
+        updateEmailFlag.run(mail.id);
+        continue;
+      }
+      // 2. todo_flag=9(제외)된 제목과 유사한 경우도 제외
+      if (excludedSubjects.some(exSubj => similarity((mail.subject || '').toLowerCase(), (exSubj || '').toLowerCase()) >= 0.8)) {
         updateEmailFlag.run(mail.id);
         continue;
       }
@@ -124,7 +145,18 @@ function extractDeadlineDate(str) {
 }
 
 function normalize(str) {
-  return (str || '').toLowerCase().replace(/\s+/g, '').replace(/[^\w가-힣]/g, '');
+  // 1. 소문자 변환
+  let s = (str || '').toLowerCase();
+  // 2. 괄호 및 괄호 안 내용 제거
+  s = s.replace(/\([^)]*\)/g, '');
+  // 3. 날짜(YYYY, MM, DD, 1~31), 요일(한글/영문), 숫자 제거
+  s = s.replace(/\d{4}년|\d{4}|\d{1,2}월|\d{1,2}일|\d{1,2}시|\d{1,2}분|\d{1,2}초/g, '');
+  s = s.replace(/\d{1,2}/g, '');
+  s = s.replace(/(월|화|수|목|금|토|일|mon|tue|wed|thu|fri|sat|sun)/g, '');
+  // 4. 특수문자, 공백 제거
+  s = s.replace(/[^\w가-힣]/g, '');
+  s = s.replace(/\s+/g, '');
+  return s;
 }
 
 function similarity(a, b) {
