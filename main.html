@@ -496,7 +496,15 @@ async function renderKeywordPage() {
 
     document.getElementById('closeBtn').onclick = () => window.electronAPI.close();
 
-    // 초기 실행
+    // 앱 시작 시 연동정보 있으면 자동 연동
+    window.addEventListener('DOMContentLoaded', async () => {
+      const settings = await window.electronAPI.getMailSettings();
+      if (settings && (settings.mailId || settings.mail_id) && (settings.mailPw || settings.mail_pw) && settings.host && settings.protocol) {
+        try {
+          await window.electronAPI.mailConnect(settings);
+        } catch (e) { /* 무시 */ }
+      }
+    });
     renderMainPage();
 
     // 환경설정(이메일 연동) 페이지 렌더 함수
@@ -542,12 +550,56 @@ async function renderKeywordPage() {
             </form>
           </div>
       `;
+        
       // 연동하기 버튼 이벤트(예시, 실제 연동 로직은 필요시 추가)
       const mailForm = document.getElementById('mailFormMain');
-      mailForm.onsubmit = (e) => {
+      mailForm.onsubmit = async (e) => {
         e.preventDefault();
-        alert('연동하기 버튼이 눌렸습니다. (실제 연동 로직은 별도 구현 필요)');
+        // 입력값 수집
+        const mailType = document.getElementById('mailTypeMain').value;
+        const protocol = document.getElementById('protocolMain').value;
+        const mailId = document.getElementById('mailIdMain').value;
+        const mailPw = document.getElementById('mailPwMain').value;
+        const host = document.getElementById('hostMain').value;
+        // mailSince는 옵션(없으면 undefined)
+        const mailSinceInput = document.getElementById('mailSinceMain');
+        const mailSince = mailSinceInput ? mailSinceInput.value : undefined;
+        const info = { mailType, protocol, mailId, mailPw, mailSince, host };
+        // 1. DB에 저장
+        await window.electronAPI.saveMailSettings(info);
+        // 2. 연동 시도
+        try {
+          const result = await window.electronAPI.mailConnect(info);
+          if(result && result.success) {
+            alert('메일 연동 성공!');
+            // 3. 저장 후 DB에서 다시 불러와 input에 반영
+            const settings = await window.electronAPI.getMailSettings();
+            if (settings) {
+              if (settings.mailId && document.getElementById('mailIdMain')) document.getElementById('mailIdMain').value = settings.mailId;
+              if (settings.mailPw && document.getElementById('mailPwMain')) document.getElementById('mailPwMain').value = settings.mailPw;
+              if (settings.host && document.getElementById('hostMain')) document.getElementById('hostMain').value = settings.host;
+              if (settings.protocol && document.getElementById('protocolMain')) document.getElementById('protocolMain').value = settings.protocol;
+              if (settings.mailSince && document.getElementById('mailSinceMain')) document.getElementById('mailSinceMain').value = settings.mailSince;
+            }
+          } else {
+            alert('메일 연동 실패: ' + (result && result.message ? result.message : '알 수 없는 오류'));
+          }
+        } catch (err) {
+          alert('메일 연동 중 오류: ' + (err && err.message ? err.message : err));
+        }
       };
+
+      // 연동정보 자동채움 (DB에서 불러와 input에 값 채우기)
+      setTimeout(async () => {
+        const settings = await window.electronAPI.getMailSettings();
+        if (settings) {
+          if (settings.mailId && document.getElementById('mailIdMain')) document.getElementById('mailIdMain').value = settings.mailId;
+          if (settings.mailPw && document.getElementById('mailPwMain')) document.getElementById('mailPwMain').value = settings.mailPw;
+          if (settings.host && document.getElementById('hostMain')) document.getElementById('hostMain').value = settings.host;
+          if (settings.protocol && document.getElementById('protocolMain')) document.getElementById('protocolMain').value = settings.protocol;
+          if (settings.mailSince && document.getElementById('mailSinceMain')) document.getElementById('mailSinceMain').value = settings.mailSince;
+        }
+      }, 100);
     }
 
     // 실시간 수신
