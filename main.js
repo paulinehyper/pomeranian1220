@@ -2,7 +2,27 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, dialog } = require('electron');
 const path = require('path');
 const db = require('./db');
+
 const setupMailIpc = require('./mail'); // mail.js 모듈 로드
+
+// 이메일 자동 할일 분류: 마감일 패턴이 있으면 todo_flag=1로 설정
+function autoClassifyEmailTodo(subject, body) {
+  // '12/29까지', '12.29까지', '12-29까지' 등 패턴
+  const deadlinePattern = /(\d{1,2})[\/.\-](\d{1,2})\s*까지/;
+  if (deadlinePattern.test(subject) || deadlinePattern.test(body)) {
+    return 1; // 할일로 분류
+  }
+  return 0;
+}
+
+// [자동분류] 이메일 신규 저장 시 마감일 패턴이 있으면 todo_flag=1로 자동 분류
+ipcMain.handle('insert-email', (event, email) => {
+  // email: { subject, body, ... }
+  const todoFlag = autoClassifyEmailTodo(email.subject, email.body);
+  db.prepare('INSERT INTO emails (subject, body, todo_flag, received_at, from_addr) VALUES (?, ?, ?, ?, ?)')
+    .run(email.subject, email.body, todoFlag, email.received_at || '', email.from_addr || '');
+  return { success: true, todo_flag: todoFlag };
+});
 
 
 // 이메일 할일 마감일 저장 IPC

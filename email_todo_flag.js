@@ -29,8 +29,9 @@ function markTodoEmails() {
   
   for (const mail of emailsToMark) {
     const subjectText = (mail.subject || '').toLowerCase();
-    // 1. 제외 키워드가 포함된 경우
-    if (excludeKeywords.some(k => k && subjectText.includes(k.toLowerCase()))) {
+    const bodyText = (mail.body || '').toLowerCase();
+    // 1. 제외 키워드가 포함된 경우 (제목 또는 본문)
+    if (excludeKeywords.some(k => k && (subjectText.includes(k.toLowerCase()) || bodyText.includes(k.toLowerCase())))) {
       updateExclude.run(mail.id);
       continue;
     }
@@ -40,9 +41,21 @@ function markTodoEmails() {
       continue;
     }
     const actionKeywords = ['요청', '요구', '청구', '협조', '제출', '회신', '답장', '작성', '기재'];
-    const hasAction = actionKeywords.some(k => subjectText.includes(k));
-    const hasTodoKeyword = keywords.some(k => k && subjectText.includes(k.toLowerCase()));
-    if (hasAction || hasTodoKeyword) {
+    const hasAction = actionKeywords.some(k => subjectText.includes(k) || bodyText.includes(k));
+    const hasTodoKeyword = keywords.some(k => k && (subjectText.includes(k.toLowerCase()) || bodyText.includes(k.toLowerCase())));
+    // 마감일 패턴(12/28까지 등)이 제목 또는 본문에 있으면 todo로 분류
+    const deadlinePattern = /(\d{1,2})[\/.\-](\d{1,2})\s*까지/;
+    const hasDeadline = deadlinePattern.test(mail.subject) || deadlinePattern.test(mail.body);
+
+    // 뉴스/기사/보도자료 등 본문만 있는 경우 제외
+    const newsKeywords = ['뉴스', '속보', '보도자료', '기사', '헤드라인', '이슈', '보도', '단신', '신문'];
+    const bodyIsNews = newsKeywords.some(k => bodyText.includes(k));
+    // 본문이 뉴스 키워드만 포함하고, 할일 키워드/액션이 없고, 마감일만 제목에 있는 경우 제외
+    if (hasDeadline && !hasAction && !hasTodoKeyword && bodyIsNews) {
+      updateExclude.run(mail.id);
+      continue;
+    }
+    if (hasAction || hasTodoKeyword || hasDeadline) {
       update.run(mail.id);
     }
   }
