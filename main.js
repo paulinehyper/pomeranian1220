@@ -7,6 +7,20 @@ const setupMailIpc = require('./mail'); // mail.js 모듈 로드
 
 // 이메일 자동 할일 분류: 마감일 패턴이 있으면 todo_flag=1로 설정
 function autoClassifyEmailTodo(subject, body) {
+  // exclude 키워드 체크
+  let excludeKeywords = db.prepare("SELECT word FROM keywords WHERE type = 'exclude'").all().map(r => r.word);
+  if (excludeKeywords.length === 1 && typeof excludeKeywords[0] === 'string' && excludeKeywords[0].includes(',')) {
+    excludeKeywords = excludeKeywords[0].split(',').map(k => k.trim()).filter(Boolean);
+  }
+  const subjectText = (subject || '').toLowerCase();
+  const bodyText = (body || '').toLowerCase();
+  for (const k of excludeKeywords) {
+    if (!k) continue;
+    const kw = k.toLowerCase();
+    if (subjectText.includes(kw) || bodyText.includes(kw)) {
+      return 9; // 무조건 제외
+    }
+  }
   // '12/29까지', '12.29까지', '12-29까지' 등 패턴
   const deadlinePattern = /(\d{1,2})[\/.\-](\d{1,2})\s*까지/;
   if (deadlinePattern.test(subject) || deadlinePattern.test(body)) {
@@ -247,6 +261,7 @@ ipcMain.handle('exclude-todo', (event, id, isEmail) => { // id와 isEmail 두 �
 });
 
 // 키워드 관리
+const { markTodoEmails } = require('./email_todo_flag');
 ipcMain.handle('get-keywords', () => db.prepare("SELECT id, word, type FROM keywords").all());
 ipcMain.handle('insert-keyword', (event, keyword) => {
   try {
@@ -264,6 +279,10 @@ ipcMain.handle('insert-keyword', (event, keyword) => {
       db.prepare('INSERT INTO keywords (word) VALUES (?)').run(word);
     }
     db.prepare('UPDATE emails SET todo_flag = 1 WHERE subject LIKE ?').run(`%${word}%`);
+    // exclude 키워드 등록 시 바로 메일 분류 적용
+    if (type === 'exclude') {
+      markTodoEmails();
+    }
     notifyRefresh();
     return { success: true };
   } catch (err) { return { success: false }; }

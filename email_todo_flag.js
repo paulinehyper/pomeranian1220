@@ -1,3 +1,24 @@
+// [추가] 할일로 분류된 이메일 중 exclude 키워드에 포함된 메일제목과 유사하면 제외 처리
+function excludeSimilarTodoEmails() {
+  // todo_flag=1(할일) 메일만 검사
+  const todoEmails = db.prepare('SELECT id, subject FROM emails WHERE todo_flag = 1').all();
+  // exclude 키워드 목록
+  let excludeKeywords = db.prepare("SELECT word FROM keywords WHERE type = 'exclude'").all().map(r => r.word);
+  if (excludeKeywords.length === 1 && typeof excludeKeywords[0] === 'string' && excludeKeywords[0].includes(',')) {
+    excludeKeywords = excludeKeywords[0].split(',').map(k => k.trim()).filter(Boolean);
+  }
+  // 유사도 기준
+  const SIMILARITY_THRESHOLD = 0.8;
+  const updateExclude = db.prepare('UPDATE emails SET todo_flag = 9 WHERE id = ?');
+  for (const mail of todoEmails) {
+    for (const keyword of excludeKeywords) {
+      if (similarity((mail.subject || '').toLowerCase(), (keyword || '').toLowerCase()) >= SIMILARITY_THRESHOLD) {
+        updateExclude.run(mail.id);
+        break;
+      }
+    }
+  }
+}
 const db = require('./db');
 const crypto = require('crypto');
 
@@ -16,7 +37,8 @@ function markTodoEmails() {
   } catch (e) {}
   
   const keywords = userKeywords.length > 0 ? userKeywords : TODO_KEYWORDS;
-  const emailsToMark = db.prepare('SELECT id, subject, body FROM emails WHERE todo_flag = 0').all();
+  // todo_flag=0(미분류) 또는 todo_flag=1(할일) 메일 모두 검사
+  const emailsToMark = db.prepare('SELECT id, subject, body, todo_flag FROM emails WHERE todo_flag IN (0,1)').all();
   const update = db.prepare('UPDATE emails SET todo_flag = 1 WHERE id = ?');
     const updateExclude = db.prepare('UPDATE emails SET todo_flag = 9 WHERE id = ?');
     let excludeKeywords = db.prepare("SELECT word FROM keywords WHERE type = 'exclude'").all().map(r => r.word);
@@ -30,8 +52,32 @@ function markTodoEmails() {
   for (const mail of emailsToMark) {
     const subjectText = (mail.subject || '').toLowerCase();
     const bodyText = (mail.body || '').toLowerCase();
-    // 1. 제외 키워드가 포함된 경우 (제목 또는 본문)
-    if (excludeKeywords.some(k => k && (subjectText.includes(k.toLowerCase()) || bodyText.includes(k.toLowerCase())))) {
+    // 1. 제외 키워드가 제목 또는 본문에 "포함" 또는 "완전일치"하면 무조건 제외
+    let excluded = false;
+    for (const k of excludeKeywords) {
+      if (!k) continue;
+      const kw = k.toLowerCase();
+      // 완전일치 또는 포함
+      if (
+        subjectText === kw ||
+        subjectText.includes(kw) ||
+        bodyText === kw ||
+        bodyText.includes(kw)
+      ) {
+        if (mail.todo_flag !== 9) {
+          console.log(`[EXCLUDE] subject: '${subjectText}', keyword: '${kw}' → 제외 처리`);
+          updateExclude.run(mail.id);
+        }
+        excluded = true;
+        break;
+      }
+    }
+    if (excluded) continue;
+
+    // 1-2. 제목에 날짜(YYYY년 MM월 DD일 등)가 있어도 제외 키워드가 있으면 무조건 제외
+    const datePattern = /(\d{4}년\s*\d{1,2}월\s*\d{1,2}일)|(\d{1,2}월\s*\d{1,2}일)/;
+    const hasDateInSubject = datePattern.test(mail.subject);
+    if (hasDateInSubject && excludeKeywords.some(k => k && subjectText.includes(k.toLowerCase()))) {
       updateExclude.run(mail.id);
       continue;
     }
@@ -55,10 +101,12 @@ function markTodoEmails() {
       updateExclude.run(mail.id);
       continue;
     }
-    if (hasAction || hasTodoKeyword || hasDeadline) {
+    if ((hasAction || hasTodoKeyword || hasDeadline) && mail.todo_flag !== 9) {
       update.run(mail.id);
     }
   }
+  // 후처리: exclude 키워드와 유사한 제목의 할일 메일도 제외 처리
+  excludeSimilarTodoEmails();
 }
 
 function addTodosFromEmailTodos() {
@@ -161,7 +209,7 @@ function normalize(str) {
   // 1. 소문자 변환
   let s = (str || '').toLowerCase();
   // 2. 괄호 및 괄호 안 내용 제거
-  s = s.replace(/\([^)]*\)/g, '');
+  s = s.replace(/\[[^\]]*\]/g, '').replace(/\([^)]*\)/g, '');
   // 3. 날짜(YYYY, MM, DD, 1~31), 요일(한글/영문), 숫자 제거
   s = s.replace(/\d{4}년|\d{4}|\d{1,2}월|\d{1,2}일|\d{1,2}시|\d{1,2}분|\d{1,2}초/g, '');
   s = s.replace(/\d{1,2}/g, '');
@@ -173,19 +221,31 @@ function normalize(str) {
 }
 
 function similarity(a, b) {
-  a = normalize(a); b = normalize(b);
+  a = normalize(a);
+  b = normalize(b);
+  if (a === b) return 1;
   if (!a || !b) return 0;
-  const m = a.length, n = b.length;
-  const dp = Array.from({length: m+1}, () => Array(n+1).fill(0));
-  for (let i=0; i<=m; i++) dp[i][0] = i;
-  for (let j=1; j<=m; j++) {
-    for (let k=1; k<=n; k++) {
-      if (a[j-1] === b[k-1]) dp[j][k] = dp[j-1][k-1];
-      else dp[j][k] = 1 + Math.min(dp[j-1][k], dp[j][k-1], dp[j-1][k-1]);
+  const m = a.length;
+  const n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
     }
   }
+
   return 1 - dp[m][n] / Math.max(m, n);
 }
 
 module.exports = markTodoEmails;
 module.exports.addTodosFromEmailTodos = addTodosFromEmailTodos;
+module.exports.excludeSimilarTodoEmails = excludeSimilarTodoEmails;
