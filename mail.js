@@ -2,7 +2,7 @@ const { ipcMain } = require('electron');
 const Imap = require('imap-simple');
 const Poplib = require('poplib');
 const db = require('./db');
-const tfClassifier = require('./tf_todo_classifier');
+// const tfClassifier = require('./tf_todo_classifier');
 
 function getMailConfig(info) {
   // DEBUG: info.mailSince 값 확인
@@ -66,18 +66,30 @@ function setupMailIpc(main) {
 
 
   async function syncMail(info) {
-    await tfClassifier.train();
+    // await tfClassifier.train();
     const config = getMailConfig(info);
     if (info.protocol.startsWith('imap')) {
-      // 기존 IMAP 로직
+      // IMAP: 최신 메일 10개만 처리
       try {
         const conn = await Imap.connect({ imap: config });
         await conn.openBox('INBOX');
         const searchCriteria = getSearchCriteria(info);
         console.log('[syncMail] 검색 조건:', JSON.stringify(searchCriteria));
         const fetchOptions = { bodies: ["HEADER", "TEXT"], struct: true };
-        const messages = await conn.search(searchCriteria, fetchOptions);
-        console.log(`[syncMail] 검색된 새 메일: ${messages.length}건`);
+        let messages = await conn.search(searchCriteria, fetchOptions);
+        // 최신 메일이 뒤에 있을 수 있으므로 날짜 기준 정렬 후 10개만
+        messages = messages
+          .map(m => {
+            const headerPart = m.parts.find(p => p.which === 'HEADER');
+            let date = '';
+            if (headerPart && headerPart.body) {
+              date = Array.isArray(headerPart.body.date) ? headerPart.body.date[0] : (headerPart.body.date || '');
+            }
+            return { ...m, _sortDate: new Date(date).getTime() || 0 };
+          })
+          .sort((a, b) => b._sortDate - a._sortDate)
+          .slice(0, 10);
+        console.log(`[syncMail] 최신 10개 메일만 처리: ${messages.length}건`);
         const { simpleParser } = require('mailparser');
         const crypto = require('crypto');
         const exists = db.prepare('SELECT COUNT(*) as cnt FROM emails WHERE unique_hash = ?');
@@ -124,12 +136,9 @@ function setupMailIpc(main) {
               }
             }
             const hash = crypto.createHash('sha256').update((subject||'')+(body||'')+(from||'')+(date||'')).digest('hex');
-            let todoFlag = null;
-            try {
-              todoFlag = await tfClassifier.predictTodo(subject + ' ' + body);
-            } catch (e) {
-              todoFlag = null;
-            }
+            // TensorFlow 분류기 제거, rule-based 분류로 대체
+            const { autoClassifyEmailTodo } = require('./main');
+            let todoFlag = autoClassifyEmailTodo(subject, body);
             const finalDeadline = extractDeadline(subject) || extractDeadline(body);
             if (!exists.get(hash).cnt) {
               const createdAt = info.mailSince || new Date().toISOString();
@@ -146,7 +155,7 @@ function setupMailIpc(main) {
         return { success: false, message: e.message };
       }
     } else if (info.protocol.startsWith('pop3')) {
-      // POP3 연동 로직
+      // POP3: 최신 메일 10개만 처리
       return new Promise((resolve) => {
         const Pop3 = Poplib;
         const { host, port, tls, user, password } = config;
@@ -157,7 +166,8 @@ function setupMailIpc(main) {
         });
         let mailCount = 0;
         let current = 1;
-        let messages = [];
+        let startIdx = 1;
+        let endIdx = 1;
         let errorMsg = null;
         client.on('error', function(err) {
           errorMsg = err.message;
@@ -177,13 +187,17 @@ function setupMailIpc(main) {
         client.on('stat', function(status, data) {
           if (status && data[0] > 0) {
             mailCount = data[0];
+            // 최신 10개만 (번호가 큰게 최신)
+            startIdx = Math.max(1, mailCount - 9);
+            endIdx = mailCount;
+            current = startIdx;
             fetchNext();
           } else {
             client.quit();
           }
         });
         function fetchNext() {
-          if (current > mailCount) {
+          if (current > endIdx) {
             client.quit();
             return;
           }
@@ -201,10 +215,9 @@ function setupMailIpc(main) {
               const crypto = require('crypto');
               const hash = crypto.createHash('sha256').update((subject||'')+(body||'')+(from||'')+(date||'')).digest('hex');
               const exists = db.prepare('SELECT COUNT(*) as cnt FROM emails WHERE unique_hash = ?');
-              let todoFlag = null;
-              try {
-                todoFlag = await tfClassifier.predictTodo(subject + ' ' + body);
-              } catch (e) { todoFlag = null; }
+              // TensorFlow 분류기 제거, rule-based 분류로 대체
+              const { autoClassifyEmailTodo } = require('./main');
+              let todoFlag = autoClassifyEmailTodo(subject, body);
               const finalDeadline = extractDeadline(subject) || extractDeadline(body);
               if (!exists.get(hash).cnt) {
                 const createdAt = info.mailSince || new Date().toISOString();
@@ -221,7 +234,7 @@ function setupMailIpc(main) {
           if (errorMsg) {
             resolve({ success: false, message: errorMsg });
           } else {
-            resolve({ success: true, count: mailCount });
+            resolve({ success: true, count: endIdx - startIdx + 1 });
           }
         });
       });

@@ -20,7 +20,7 @@ function excludeSimilarTodoEmails() {
   }
 }
 const db = require('./db');
-const crypto = require('crypto');
+// const crypto = require('crypto'); // TensorFlow 분류기 사용 흔적 없음, 별도 제거 필요 없음
 
 const TODO_KEYWORDS = [
   '할일', '제출', '제출기한', '마감', '기한', '검토', '확인', '필수', '요청', '요구', '청구', '협조', '회신', '답장', '작성', '기재',
@@ -37,8 +37,14 @@ function markTodoEmails() {
   } catch (e) {}
   
   const keywords = userKeywords.length > 0 ? userKeywords : TODO_KEYWORDS;
-  // todo_flag=0(미분류) 또는 todo_flag=1(할일) 메일 모두 검사
-  const emailsToMark = db.prepare('SELECT id, subject, body, todo_flag FROM emails WHERE todo_flag IN (0,1)').all();
+  // todo_flag=0(미분류) 또는 todo_flag=1(할일) 중, 7일 이내 및 오늘 이후 신규 메일만 검사
+  const emailsToMark = db.prepare(`
+    SELECT id, subject, body, todo_flag FROM emails
+    WHERE todo_flag IN (0,1)
+      AND (
+        date(received_at) >= date('now', '-7 days')
+      )
+  `).all();
   const update = db.prepare('UPDATE emails SET todo_flag = 1 WHERE id = ?');
     const updateExclude = db.prepare('UPDATE emails SET todo_flag = 9 WHERE id = ?');
     let excludeKeywords = db.prepare("SELECT word FROM keywords WHERE type = 'exclude'").all().map(r => r.word);
@@ -117,8 +123,14 @@ function addTodosFromEmailTodos() {
       excludeKeywords = excludeKeywords[0].split(',').map(k => k.trim()).filter(Boolean);
     }
     
-    // 1. 변환 대기 중인(todo_flag = 1) 메일만 가져옴
-    const targetEmails = db.prepare('SELECT id, subject, body, deadline, received_at FROM emails WHERE todo_flag = 1').all();
+    // 1. 변환 대기 중인(todo_flag = 1) 메일 중 7일 이내 및 오늘 이후 신규 메일만 가져옴
+    const targetEmails = db.prepare(`
+      SELECT id, subject, body, deadline, received_at FROM emails
+      WHERE todo_flag = 1
+        AND (
+          date(received_at) >= date('now', '-7 days')
+        )
+    `).all();
     // todo_flag=9(제외)된 이메일 제목 목록
     const excludedSubjects = db.prepare('SELECT subject FROM emails WHERE todo_flag = 9').all().map(r => r.subject).filter(Boolean);
     

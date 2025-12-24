@@ -1,3 +1,5 @@
+// mail.js에서 사용할 수 있도록 export
+module.exports.autoClassifyEmailTodo = autoClassifyEmailTodo;
 
 const { app, BrowserWindow, ipcMain, Tray, Menu, dialog } = require('electron');
 const path = require('path');
