@@ -17,7 +17,11 @@
     },
     "files": [
       "**/*",
-      "!todo.db"
+      "!todo.db",
+       "!*.js",          
+       "*.obf.js",        
+        "!node_modules/.cache"
+
     ],
     "win": {
       "target": "nsis",
@@ -27,7 +31,8 @@
   "devDependencies": {
     "electron": "^30.5.1",
     "electron-builder": "^26.0.12",
-    "electron-rebuild": "^3.2.9"
+    "electron-rebuild": "^3.2.9",
+    "javascript-obfuscator": "^5.1.0"
   },
   "dependencies": {
     "@tensorflow/tfjs": "^4.20.0",

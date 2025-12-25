@@ -80,6 +80,23 @@
       <div class="mail-detail-body" id="mailDetailBody"></div>
       <button class="close-btn" onclick="window.close()">닫기</button>
     </div>
+    <script>
+    // 메일 본문에서 Content-Type 등 헤더와 구분선(--)을 제거하고 실제 내용만 표시
+    function cleanMailBody(body) {
+      // 1. Content-Type 등 헤더 제거 (줄 전체)
+      body = body.replace(/^Content-Type:.*$/gim, '');
+      // 2. 구분선(--로 시작하는 줄) 제거
+      body = body.replace(/^--.*$/gm, '');
+      // 3. charset 등 기타 헤더 제거
+      body = body.replace(/^.*charset=.*$/gim, '');
+      // 4. 앞뒤 공백 및 빈 줄 제거
+      body = body.replace(/^\s*$/gm, '');
+      return body.trim();
+    }
+    // 실제 데이터 연동 시 window.electronAPI 등으로 대체
+    const mailBody = document.getElementById('mailDetailBody').innerText || '';
+    document.getElementById('mailDetailBody').innerText = cleanMailBody(mailBody);
+    </script>
   </div>
   <script>
     // 메일 데이터 받기

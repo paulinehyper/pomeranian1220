@@ -213,23 +213,55 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!Array.isArray(todos)) return;
         const today = new Date(); today.setHours(0,0,0,0);
         const alarmList = [];
+        // 흔들림 효과를 줄 카드 id 목록
+        const shakeIds = [];
         for (const t of todos) {
             if (!t.deadline || t.deadline === '없음') continue;
             const dl = new Date(t.deadline); dl.setHours(0,0,0,0);
             const diff = Math.floor((dl - today) / (1000*60*60*24));
-            // D-설정값 이하(예: 3 입력 시 D-3, D-2, D-1 모두 알림)
-            if (diff > 0 && diff <= dDay) {
-                alarmList.push(`[${t.task}] 마감까지 D-${diff} (${t.deadline})`);
+            const isMail = typeof t.id === 'string' && t.id.startsWith('mail-');
+            // D-설정값 이하(예: 3 입력 시 D-3, D-2, D-1, 오늘까지 모두 알림)
+            if (diff >= 0 && diff <= dDay) {
+                alarmList.push(`${isMail ? '[메일] ' : ''}${t.task} 마감까지 D-${diff} (${t.deadline})`);
+                shakeIds.push(t.id);
             }
+        }
+        // 카드 흔들림 효과 적용
+        if (shakeIds.length > 0) {
+            setTimeout(() => {
+                shakeIds.forEach(id => {
+                    // id가 mail-로 시작하면 mail-, 아니면 숫자
+                    const selector = typeof id === 'string' ? `[data-id="${id}"]` : `[data-id="${id}"]`;
+                    const card = document.querySelector(selector);
+                    if (card) {
+                        card.classList.add('shake');
+                        setTimeout(() => card.classList.remove('shake'), 1200);
+                    }
+                });
+            }, 100);
         }
         if (alarmList.length > 0) {
             showTodoAlarmPopup(alarmList.join('<br>'));
         }
+    // 흔들림 애니메이션 CSS 추가
+    const shakeStyle = document.createElement('style');
+    shakeStyle.innerHTML = `
+    .shake {
+        animation: shakeAnim 0.6s cubic-bezier(.36,.07,.19,.97) both;
+    }
+    @keyframes shakeAnim {
+        10%, 90% { transform: translateX(-2px); }
+        20%, 80% { transform: translateX(4px); }
+        30%, 50%, 70% { transform: translateX(-8px); }
+        40%, 60% { transform: translateX(8px); }
+    }
+    `;
+    document.head.appendChild(shakeStyle);
     }
 
     // 알림 타이머 관리 변수
     window.todoAlarmTimerId = null;
-    function startTodoAlarmTimer() {
+    window.startTodoAlarmTimer = function startTodoAlarmTimer() {
         if (window.todoAlarmTimerId) clearInterval(window.todoAlarmTimerId);
         const interval = parseInt(localStorage.getItem('todoAlarmInterval') || '10', 10);
         if (!interval) return;
