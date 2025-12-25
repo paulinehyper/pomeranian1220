@@ -180,8 +180,8 @@
             </div>
             <div style="margin-bottom:10px;">
               <label style="font-size:0.98em;color:#333;">마감일 며칠 전부터 알림: </label>
-              <input id="alarm-day-input" type="text" pattern="^(d-)?[0-9]+$" placeholder="예: d-1 또는 2" style="padding:4px 10px;border-radius:6px;border:1px solid #7be2c5;min-width:60px;width:80px;" />
-              <span style="color:#888;font-size:0.92em;">(예: d-1, 2 등 숫자만 입력)</span>
+              <input id="alarm-day-input" type="number" min="1" max="365" step="1" placeholder="예: 2" style="padding:4px 10px;border-radius:6px;border:1px solid #7be2c5;min-width:60px;width:80px;" />
+              <span style="color:#888;font-size:0.92em;">(d- 뒤 숫자만 입력, 예: 2)</span>
             </div>
             <button type="submit" style="background:#00b49a;color:#fff;border:none;padding:7px 22px;border-radius:7px;font-size:1em;font-weight:bold;cursor:pointer;">저장</button>
             <button type="button" id="alarm-off-btn" style="background:#e0e0e0;color:#888;border:none;padding:7px 18px;border-radius:7px;font-size:1em;font-weight:bold;cursor:pointer;margin-left:8px;">알림끄기</button>
@@ -189,7 +189,6 @@
           </form>
           <div style="color:#0093b4;font-size:1em;margin-bottom:12px;">최근 알림이 여기에 표시됩니다.</div>
           <ul id="notification-list" style="padding:0;list-style:none;color:#333;font-size:0.98em;"></ul>
-          <div style="color:#aaa;font-size:0.92em;margin-top:18px;">* 알림 기능은 추후 확장될 예정입니다.</div>
         </div>
       `;
       // 예시 알림 데이터
@@ -211,10 +210,8 @@
           return;
         }
         let dayValue = document.getElementById('alarm-day-input').value.trim();
-        // d- 접두사 제거, 숫자만 저장
-        if (dayValue.toLowerCase().startsWith('d-')) dayValue = dayValue.slice(2);
-        if (!/^\d+$/.test(dayValue)) {
-          alert('마감일 알림 입력란에는 숫자만 입력하세요.');
+        if (!dayValue || isNaN(dayValue) || dayValue < 1 || dayValue > 365) {
+          alert('마감일 알림은 1~365 사이의 숫자만 입력하세요.');
           return;
         }
         localStorage.setItem('todoAlarmInterval', interval);
@@ -271,7 +268,7 @@
       const savedInterval = localStorage.getItem('todoAlarmInterval');
       const savedDay = localStorage.getItem('todoAlarmDay');
       if (savedInterval) document.getElementById('alarm-interval').value = savedInterval;
-      if (savedDay) document.getElementById('alarm-day-input').value = 'd-' + savedDay;
+      if (savedDay) document.getElementById('alarm-day-input').value = savedDay;
     }
 
     // ===== 무료 사용기간 만료 체크 (2026-01-03 이후 차단) =====

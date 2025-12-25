@@ -217,8 +217,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!t.deadline || t.deadline === '없음') continue;
             const dl = new Date(t.deadline); dl.setHours(0,0,0,0);
             const diff = Math.floor((dl - today) / (1000*60*60*24));
-            if (diff === dDay) {
-                alarmList.push(`[${t.task}] 마감까지 D-${dDay} (${t.deadline})`);
+            // D-설정값 이하(예: 3 입력 시 D-3, D-2, D-1 모두 알림)
+            if (diff > 0 && diff <= dDay) {
+                alarmList.push(`[${t.task}] 마감까지 D-${diff} (${t.deadline})`);
             }
         }
         if (alarmList.length > 0) {
