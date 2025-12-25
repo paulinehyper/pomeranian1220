@@ -346,14 +346,18 @@ function notifyRefresh() {
 }
 
 function createWindow() {
+  // 화면의 1/3 너비로 동적 계산
+  const { screen } = require('electron');
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: Math.round(screenWidth / 3),
+    height: screenHeight,
     frame: false,
-    transparent: true,
-    alwaysOnTop: true,
+    transparent: false,
+    alwaysOnTop: false,
     title: 'Pomeranian',
     icon: path.join(__dirname, 'assets', 'icon.png'),
+    backgroundColor: '#ffffff',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
   });
   mainWindow.loadFile('main.html');
@@ -379,7 +383,7 @@ ipcMain.on('open-mail-detail', (event, params) => {
     width: 700,
     height: 600,
     frame: false,
-    alwaysOnTop: true,
+    alwaysOnTop: false,
     title: 'Pomeranian',
     icon: path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
@@ -459,7 +463,7 @@ app.whenReady().then(() => {
       width: 320,
       height: 90,
       frame: false,
-      alwaysOnTop: true,
+      alwaysOnTop: false,
       skipTaskbar: true,
       transparent: true,
       show: false,

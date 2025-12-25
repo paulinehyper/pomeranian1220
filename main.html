@@ -4,18 +4,59 @@
   <meta charset="UTF-8">
   <title>Pomeranian</title>
   <style>
-    body { margin: 0; padding: 0; background: transparent; font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif; overflow: hidden; }
-    .widget-home { position: fixed; top: 40px; left: 40px; width: 520px; height: 600px; background: #f8fffd; border-radius: 18px; box-shadow: 0 4px 32px #00b49a22, 0 1.5px 0 #00b49a11; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #eef2f1; }
+    html, body {
+      width: 33.33vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif;
+      overflow: hidden;
+    }
+    #widgetHomeMain {
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+    }
+    .widget-home {
+      width: 100%;
+      height: 100%;
+      min-width: 320px;
+      max-width: 100vw;
+      min-height: 400px;
+      max-height: 100vh;
+      position: absolute;
+      top: 0; left: 0;
+      background: #f8fffd;
+      border-radius: 0;
+      box-shadow: none;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: none;
+    }
     .widget-home-header { height: 64px; background: #fff; display: flex; align-items: center; justify-content: center; position: relative; padding: 0 24px; box-shadow: 0 2px 8px #00b49a11; font-size: 1.15em; font-weight: bold; color: #00b49a; -webkit-app-region: drag; flex-shrink: 0; }
     .widget-home-header * { -webkit-app-region: no-drag; }
-    
     .widget-home-sidebar { width: 56px; height: 100%; background: #ffffff; border-right: 1px solid #f0f0f0; display: flex; flex-direction: column; align-items: center; gap: 16px; padding-top: 20px; flex-shrink: 0; }
     .sidebar-btn { background: transparent; border: none; cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; color: #00b49a; transition: 0.2s; }
     .sidebar-btn:hover { background: #e6fffb; }
     .sidebar-btn svg { width: 22px; height: 22px; stroke: currentColor; }
-
-    .widget-content-area { display: flex; flex: 1; overflow: hidden; }
-    .widget-home-main { padding: 20px; flex: 1; overflow-y: auto; background: #f8fffd; }
+    .widget-content-area {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      width: 100%;
+      height: calc(100% - 64px);
+    }
+    .widget-home-main {
+      padding: 20px;
+      flex: 1;
+      overflow-y: auto;
+      background: #f8fffd;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+    }
     
     /* 할일 카드 스타일 */
     .todo-card { position: relative; background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 10px rgba(0, 180, 154, 0.08); border-left: 5px solid #00b49a; transition: 0.2s; cursor: pointer; }
