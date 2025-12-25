@@ -70,8 +70,8 @@
     .todo-source { font-size: 0.75em; color: #00b49a; font-weight: bold; margin-bottom: 4px; display: block; }
     
     .todo-actions { display: flex; align-items: center; gap: 6px; }
-    .action-btn { background: #fff; border: 1.2px solid #ff5e5e; color: #ff5e5e; border-radius: 6px; padding: 2px 7px; cursor: pointer; font-size: 0.8em; font-weight: bold; }
-    .action-btn:hover { background: #ff5e5e; color: #fff; }
+    .action-btn { background: #fff; border: 1.2px solid #bbb; color: #888; border-radius: 6px; padding: 2px 7px; cursor: pointer; font-size: 0.8em; font-weight: bold; }
+    .action-btn:hover { background: #eee; color: #333; }
     .delete-icon-btn { background: transparent; border: none; cursor: pointer; padding: 0; align-items: center; }
 
     .todo-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
@@ -181,16 +181,31 @@
     // [유틸] 카드 HTML 생성
     function createCardHtml(item, isEmail = false) {
       const dday = getDDay(item.deadline);
+      // 긴급성 점수 계산 (이메일만)
+      let urgencyRating = null;
+      if (isEmail && item.deadline && item.deadline !== '없음') {
+        const today = new Date(); today.setHours(0,0,0,0);
+        const target = new Date(item.deadline); target.setHours(0,0,0,0);
+        if (!isNaN(target)) {
+          const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+          if (diffDays <= 1) urgencyRating = 5;
+          else if (diffDays <= 3) urgencyRating = 4;
+          else if (diffDays <= 7) urgencyRating = 3;
+          else if (diffDays <= 10) urgencyRating = 2;
+          else if (diffDays <= 14) urgencyRating = 1;
+          else urgencyRating = 0;
+        }
+      }
       const isDone = Number(item.todo_flag) === 2;
       const taskId = item.id;
       const title = isEmail ? (item.subject || '(제목 없음)') : (item.task || item.content);
       
       return `
-        <div class="todo-card ${isDone ? 'completed' : ''}" data-id="${taskId}" data-is-email="${isEmail}" draggable="true">
+        <div class="todo-card ${isDone ? 'completed' : ''}" data-id="${taskId}" data-is-email="${isEmail}" draggable="true"${urgencyRating !== null ? ` data-urgency-rating="${urgencyRating}"` : ''}>
           <div class="todo-top">
             <div class="todo-content-wrapper">
               ${isEmail ? `<span class="todo-source">Email: ${item.from_addr || '알 수 없음'}</span>` : ''}
-              <span class="todo-content">${title}</span>
+                <span class="todo-content">${isEmail && urgencyRating !== null && urgencyRating >= 4 ? '★ ' : ''}${title}</span>
             </div>
             <div class="todo-actions" style="flex-direction:column;align-items:flex-end;gap:4px;">
               ${!isDone ? `<button class="action-btn exclude-btn">제외</button>` : ''}
@@ -434,8 +449,28 @@ async function refreshAll() {
     ? userTodos.map(t => createCardHtml(t, false)).join('')
     : '<p style="text-align:center;color:#bbb;padding:10px;">등록된 할일이 없습니다.</p>';
 
-  const emailTodos = await window.electronAPI.getTodoEmails();
+  let emailTodos = await window.electronAPI.getTodoEmails();
   const emailCount = (emailTodos && emailTodos.length) ? emailTodos.length : 0;
+  // 긴급성 점수 계산 및 정렬
+  if (emailCount) {
+    emailTodos = emailTodos.map(e => {
+      let urgencyRating = 0;
+      if (e.deadline && e.deadline !== '없음') {
+        const today = new Date(); today.setHours(0,0,0,0);
+        const target = new Date(e.deadline); target.setHours(0,0,0,0);
+        if (!isNaN(target)) {
+          const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+          if (diffDays <= 1) urgencyRating = 5;
+          else if (diffDays <= 3) urgencyRating = 4;
+          else if (diffDays <= 7) urgencyRating = 3;
+          else if (diffDays <= 10) urgencyRating = 2;
+          else if (diffDays <= 14) urgencyRating = 1;
+        }
+      }
+      return { ...e, urgencyRating };
+    });
+    emailTodos.sort((a, b) => b.urgencyRating - a.urgencyRating);
+  }
   const emailCountSpan = document.getElementById('emailTodoCount');
   if (emailCountSpan) emailCountSpan.textContent = emailCount;
   emailContainer.innerHTML = emailCount
