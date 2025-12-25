@@ -248,24 +248,33 @@ ipcMain.handle('set-todo-complete', (event, id, flag) => {
 ipcMain.handle('exclude-todo', (event, id, isEmail) => { // id와 isEmail 두 개를 받아야 합니다.
   try {
     let titleToExclude = "";
-    
     if (isEmail) {
       const email = db.prepare('SELECT subject FROM emails WHERE id = ?').get(id);
       if (email) {
         titleToExclude = email.subject;
         db.prepare('UPDATE emails SET todo_flag = 0 WHERE id = ?').run(id);
+        // 제목에서 단어 추출 후 exclude 키워드로 등록
+        if (titleToExclude) {
+          // 한글, 영문, 숫자 단어 추출 (2글자 이상, 중복 방지)
+          const words = (titleToExclude.match(/[\p{L}\p{N}]{2,}/gu) || [])
+            .map(w => w.trim())
+            .filter(w => w.length >= 2);
+          const uniqueWords = [...new Set(words)];
+          for (const word of uniqueWords) {
+            db.prepare('INSERT OR IGNORE INTO keywords (word, type) VALUES (?, ?)').run(word, 'exclude');
+          }
+        }
       }
     } else {
       const todo = db.prepare('SELECT task FROM todos WHERE id = ?').get(id);
       if (todo) {
         titleToExclude = todo.task;
         db.prepare('UPDATE todos SET todo_flag = 0 WHERE id = ?').run(id);
+        // 기존대로 전체 task를 exclude로 등록
+        if (titleToExclude) {
+          db.prepare('INSERT OR IGNORE INTO keywords (word, type) VALUES (?, ?)').run(titleToExclude, 'exclude');
+        }
       }
-    }
-
-    if (titleToExclude) {
-      db.prepare('INSERT OR IGNORE INTO keywords (word, type) VALUES (?, ?)')
-        .run(titleToExclude, 'exclude');
     }
 
     notifyRefresh();
