@@ -63,9 +63,23 @@
     
     /* 할일 카드 스타일 */
     .todo-card { position: relative; background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 10px rgba(0, 180, 154, 0.08); border-left: 5px solid #00b49a; transition: 0.2s; cursor: pointer; }
+    .todo-card.purple { background: #f5edff !important; border-left-color: #a259e4 !important; }
+    .todo-card.orange { background: #fff4e6 !important; border-left-color: #ff9800 !important; }
+    .todo-card.blue { background: #e6f2ff !important; border-left-color: #2196f3 !important; }
     .todo-card:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 180, 154, 0.12); }
     .todo-card.completed { border-left-color: #bbb !important; background: #f2f2f2 !important; opacity: 0.7; }
     .todo-card.completed .todo-content { text-decoration: line-through; color: #888; }
+    .shake {
+      animation: shake 0.5s;
+    }
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      20% { transform: translateX(-5px); }
+      40% { transform: translateX(5px); }
+      60% { transform: translateX(-5px); }
+      80% { transform: translateX(5px); }
+      100% { transform: translateX(0); }
+    }
 
     .todo-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
     .todo-content-wrapper { flex: 1; }
@@ -98,6 +112,61 @@
 </head>
 <body>
   <div class="widget-home">
+    <script>
+    // 알림 설정 주기대로 할일 카드 흔들림 제어
+    // 흔들릴 때마다 색상 변경 (보라, 오렌지, 파랑 순환)
+    let shakeColorIndex = 0;
+    const shakeColors = ['purple', 'orange', 'blue'];
+    function shakeTodoCardsByAlarm() {
+      const alarmInterval = Number(localStorage.getItem('todoAlarmInterval')) || 0;
+      const alarmDay = Number(localStorage.getItem('todoAlarmDay')) || 0;
+      if (!alarmInterval || !alarmDay) return;
+      const today = new Date();
+      document.querySelectorAll('.todo-card').forEach(card => {
+        const dateSpan = card.querySelector('.todo-date');
+        if (!dateSpan) return;
+        const deadlineStr = dateSpan.getAttribute('data-deadline');
+        if (!deadlineStr) return;
+        const deadline = new Date(deadlineStr);
+        const diff = Math.floor((deadline - today) / (1000*60*60*24));
+        if (diff <= alarmDay && diff >= 0) {
+          // 색상 순환 적용
+          shakeColors.forEach(color => card.classList.remove(color));
+          const colorClass = shakeColors[shakeColorIndex % shakeColors.length];
+          card.classList.add(colorClass);
+          card.classList.add('shake');
+          setTimeout(() => {
+            card.classList.remove('shake');
+          }, 1000);
+        } else {
+          // 알림 범위가 아니면 색상 원래대로
+          shakeColors.forEach(color => card.classList.remove(color));
+        }
+      });
+      shakeColorIndex++;
+    }
+    // 기존 타이머 제거
+    if (window.todoCardShakeTimerId) {
+      clearInterval(window.todoCardShakeTimerId);
+      window.todoCardShakeTimerId = null;
+    }
+    // 알림 설정값 있을 때만 타이머 실행
+    function startTodoCardShakeTimer() {
+      if (window.todoCardShakeTimerId) {
+        clearInterval(window.todoCardShakeTimerId);
+        window.todoCardShakeTimerId = null;
+      }
+      const alarmInterval = Number(localStorage.getItem('todoAlarmInterval')) || 0;
+      if (!alarmInterval) return;
+      window.todoCardShakeTimerId = setInterval(shakeTodoCardsByAlarm, alarmInterval * 60 * 1000);
+    }
+    // 최초 실행 및 알림 설정 변경 시 타이머 재시작
+    document.addEventListener('DOMContentLoaded', () => {
+      startTodoCardShakeTimer();
+    });
+    window.startTodoCardShakeTimer = startTodoCardShakeTimer;
+    // 알림 설정 저장/변경 시 타이머 재시작 (기존 저장 이벤트에 추가 필요)
+    </script>
     <div class="widget-home-header">
       <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="사이드바 토글" aria-label="사이드바 토글">
         <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -223,6 +292,10 @@
         }
         // 벨 아이콘 갱신
         if (typeof updateBellIcon === 'function') updateBellIcon();
+        // 알림 타이머 즉시 재시작
+        if (window.startTodoAlarmTimer) window.startTodoAlarmTimer();
+        // 벨 아이콘 갱신
+        if (typeof updateBellIcon === 'function') updateBellIcon();
       };
       // 알림끄기 버튼 이벤트
       const alarmOffBtn = document.getElementById('alarm-off-btn');
@@ -260,6 +333,10 @@
           `;
           document.body.appendChild(modal);
           document.getElementById('closeAlarmOffPopup').onclick = () => modal.remove();
+          // 벨 아이콘 갱신
+          if (typeof updateBellIcon === 'function') updateBellIcon();
+          // 알림 타이머 즉시 중지
+          if (window.startTodoAlarmTimer) window.startTodoAlarmTimer();
           // 벨 아이콘 갱신
           if (typeof updateBellIcon === 'function') updateBellIcon();
         };
