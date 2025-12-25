@@ -276,6 +276,34 @@ ipcMain.handle('exclude-todo', (event, id, isEmail) => { // id와 isEmail 두 �
         }
       }
     }
+      let excludeWords = [];
+      if (isEmail && titleToExclude) {
+        // 한글, 영문, 숫자, 특수문자(?,!) 포함 2글자 이상 단어 추출
+        // 예: "(광고) [보안뉴스 뉴스레터][쿠팡 해킹] 3370만명 유출, 미국선 법 위반 아니라고?"
+        // => 광고, 보안뉴스, 뉴스레터, 쿠팡, 해킹, 3370만명, 유출, 미국선, 법, 위반, 아니라고?
+        // Node.js에서 \p{L}, \p{N}는 지원되지 않으므로, 한글/영문/숫자/특수문자(?,!) 단어 추출
+        // 2글자 이상: 한글, 영문, 숫자, ?, !, - 포함
+        const words = (titleToExclude.match(/[가-힣a-zA-Z0-9\-\?\!]{2,}/g) || [])
+          .map(w => w.replace(/^[\[\(]+|[\]\)]+$/g, '').trim()) // 괄호, 대괄호 제거
+          .filter(w => w.length >= 2);
+        excludeWords = [...new Set(words)];
+      } else if (!isEmail && titleToExclude) {
+        excludeWords = [titleToExclude];
+      }
+      // 추가: 추출된 excludeWords로 기존 할일 이메일 중 해당 키워드가 포함된 제목은 todo_flag=0(제외) 처리
+      if (excludeWords.length > 0) {
+        const emailTodos = db.prepare("SELECT id, subject FROM emails WHERE todo_flag = 1").all();
+        for (const email of emailTodos) {
+          if (!email.subject) continue;
+          const subject = email.subject;
+          for (const word of excludeWords) {
+            if (subject.includes(word)) {
+              db.prepare('UPDATE emails SET todo_flag = 0 WHERE id = ?').run(email.id);
+              break;
+            }
+          }
+        }
+      }
 
     notifyRefresh();
     return { success: true };
