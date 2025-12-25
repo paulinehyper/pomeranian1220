@@ -23,6 +23,17 @@ function autoClassifyEmailTodo(subject, body) {
       return 9; // 무조건 제외
     }
   }
+
+  // include 키워드 체크 (예: 제출, 기한, 회신, 금감원)
+  const includeKeywords = ['제출', '기한', '회신', '금감원'];
+  for (const k of includeKeywords) {
+    if (!k) continue;
+    const kw = k.toLowerCase();
+    if (subjectText.includes(kw) || bodyText.includes(kw)) {
+      return 1; // 할일로 분류
+    }
+  }
+
   // '12/29까지', '12.29까지', '12-29까지' 등 패턴
   const deadlinePattern = /(\d{1,2})[\/.\-](\d{1,2})\s*까지/;
   if (deadlinePattern.test(subject) || deadlinePattern.test(body)) {
