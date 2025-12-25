@@ -123,6 +123,15 @@
         <button class="sidebar-btn" title="휴지통" data-type="trash">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
         </button>
+        <button class="sidebar-btn" title="알림" data-type="notification">
+          <span id="notification-bell-wrapper" style="display:inline-block;position:relative;">
+            <svg id="notification-bell-icon" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 16v-5a6 6 0 1 0-12 0v5a2 2 0 0 1-2 2h16a2 2 0 0 1-2-2z"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              <line id="notification-bell-off-line" x1="5" y1="19" x2="19" y2="5" stroke="#ff335e" stroke-width="2.2" style="display:none;" />
+            </svg>
+          </span>
+        </button>
         <button class="sidebar-btn" title="환경설정" data-type="settings">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 5 15.4a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 8c.14.31.22.65.22 1v.09A1.65 1.65 0 0 0 21 12c0 .35-.08.69-.22 1z"/></svg>
         </button>
@@ -143,6 +152,128 @@
         widgetHome.classList.toggle('hide-sidebar');
       };
     });
+
+    // 알림 페이지 렌더 함수
+    function renderNotificationPage() {
+            // 알림 상태에 따라 벨 아이콘 스타일 변경
+            function updateBellIcon() {
+              const bellLine = document.getElementById('notification-bell-off-line');
+              if (!bellLine) return;
+              const hasAlarm = localStorage.getItem('todoAlarmInterval') && localStorage.getItem('todoAlarmDay');
+              bellLine.style.display = hasAlarm ? 'none' : 'block';
+            }
+            updateBellIcon();
+      const widgetMain = document.getElementById('widgetHomeMain');
+      if (!widgetMain) return;
+      widgetMain.innerHTML = `
+        <div style="max-width:420px;margin:0 auto;padding:0 8px;">
+          <div style="font-size:1.18em;font-weight:bold;color:#00b49a;margin-bottom:22px;text-align:left;display:flex;align-items:center;gap:8px;">
+            <svg viewBox='0 0 24 24' width='24' height='24' fill='none' stroke='#00b49a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align:middle;'><path d='M18 16v-5a6 6 0 1 0-12 0v5a2 2 0 0 1-2 2h16a2 2 0 0 1-2-2z'/><path d='M13.73 21a2 2 0 0 1-3.46 0'/></svg>
+            알림
+          </div>
+          <form id="notification-settings-form" style="background:#f8fffd;border:1px solid #e0f7f3;border-radius:10px;padding:16px 14px 10px 14px;margin-bottom:18px;">
+            <div style="font-weight:bold;color:#0093b4;margin-bottom:10px;">할일 알림 설정</div>
+            <div style="margin-bottom:10px;">
+              <label style="font-size:0.98em;color:#333;">알림 간격(분): </label>
+              <select id="alarm-interval" style="padding:4px 10px;border-radius:6px;border:1px solid #7be2c5;">
+                <option value="5">5분</option>
+                <option value="10">10분</option>
+                <option value="15">15분</option>
+                <option value="30">30분</option>
+                <option value="60">60분</option>
+              </select>
+            </div>
+            <div style="margin-bottom:10px;">
+              <label style="font-size:0.98em;color:#333;">마감일 며칠 전부터 알림: </label>
+              <input id="alarm-day-input" type="text" pattern="^(d-)?[0-9]+$" placeholder="예: d-1 또는 2" style="padding:4px 10px;border-radius:6px;border:1px solid #7be2c5;min-width:60px;width:80px;" />
+              <span style="color:#888;font-size:0.92em;">(예: d-1, 2 등 숫자만 입력)</span>
+            </div>
+            <button type="submit" style="background:#00b49a;color:#fff;border:none;padding:7px 22px;border-radius:7px;font-size:1em;font-weight:bold;cursor:pointer;">저장</button>
+            <button type="button" id="alarm-off-btn" style="background:#e0e0e0;color:#888;border:none;padding:7px 18px;border-radius:7px;font-size:1em;font-weight:bold;cursor:pointer;margin-left:8px;">알림끄기</button>
+            <span id="alarm-save-msg" style="margin-left:10px;color:#00b49a;font-size:0.97em;display:none;">저장됨!</span>
+          </form>
+          <div style="color:#0093b4;font-size:1em;margin-bottom:12px;">최근 알림이 여기에 표시됩니다.</div>
+          <ul id="notification-list" style="padding:0;list-style:none;color:#333;font-size:0.98em;"></ul>
+          <div style="color:#aaa;font-size:0.92em;margin-top:18px;">* 알림 기능은 추후 확장될 예정입니다.</div>
+        </div>
+      `;
+      // 예시 알림 데이터
+      const notifications = [
+        { msg: '오늘 할일 2건이 마감입니다.', date: '2025-12-24 09:00' },
+        { msg: '새로운 메일이 도착했습니다.', date: '2025-12-23 18:12' }
+      ];
+      const list = document.getElementById('notification-list');
+      if (list) {
+        list.innerHTML = notifications.length ? notifications.map(n => `<li style='margin-bottom:10px;'><span style='color:#00b49a;font-weight:bold;'>[알림]</span> ${n.msg}<br><span style='color:#aaa;font-size:0.92em;'>${n.date}</span></li>`).join('') : '<li>알림이 없습니다.</li>';
+      }
+      // 저장 이벤트
+      const form = document.getElementById('notification-settings-form');
+      form.onsubmit = function(e) {
+        e.preventDefault();
+        const interval = document.getElementById('alarm-interval').value;
+        let dayValue = document.getElementById('alarm-day-input').value.trim();
+        // d- 접두사 제거, 숫자만 저장
+        if (dayValue.toLowerCase().startsWith('d-')) dayValue = dayValue.slice(2);
+        if (!/^\d+$/.test(dayValue)) {
+          alert('마감일 알림 입력란에는 숫자만 입력하세요.');
+          return;
+        }
+        localStorage.setItem('todoAlarmInterval', interval);
+        localStorage.setItem('todoAlarmDay', dayValue);
+        const msg = document.getElementById('alarm-save-msg');
+        if (msg) {
+          msg.style.display = 'inline';
+          setTimeout(() => { msg.style.display = 'none'; }, 1200);
+        }
+        // 벨 아이콘 갱신
+        if (typeof updateBellIcon === 'function') updateBellIcon();
+      };
+      // 알림끄기 버튼 이벤트
+      const alarmOffBtn = document.getElementById('alarm-off-btn');
+      if (alarmOffBtn) {
+        alarmOffBtn.onclick = function() {
+          localStorage.removeItem('todoAlarmInterval');
+          localStorage.removeItem('todoAlarmDay');
+          if (window.todoAlarmTimerId) {
+            clearInterval(window.todoAlarmTimerId);
+            window.todoAlarmTimerId = null;
+          }
+          // 커스텀 팝업
+          const modal = document.createElement('div');
+          modal.style.position = 'fixed';
+          modal.style.left = 0;
+          modal.style.top = 0;
+          modal.style.width = '100vw';
+          modal.style.height = '100vh';
+          modal.style.background = 'rgba(0,0,0,0.18)';
+          modal.style.display = 'flex';
+          modal.style.alignItems = 'center';
+          modal.style.justifyContent = 'center';
+          modal.style.zIndex = 9999;
+          modal.innerHTML = `
+            <div style="background:#fff;padding:32px 36px;border-radius:14px;min-width:320px;max-width:90vw;box-shadow:0 4px 24px #00b49c22;display:flex;flex-direction:column;align-items:center;gap:18px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <img src='assets/icon.png' alt='앱 아이콘' style='width:32px;height:32px;vertical-align:middle;border-radius:8px;box-shadow:0 1px 4px #00b49a22;'>
+                <span style="font-weight:800;font-size:1.15em;">Pomeranian</span>
+              </div>
+              <div style="margin:12px 0 0 0;font-size:1.05em;color:#222;text-align:center;">알림이 해제되었습니다.</div>
+              <div style="display:flex;gap:18px;margin-top:18px;">
+                <button id="closeAlarmOffPopup" style="background:#00b49a;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:1em;cursor:pointer;">확인</button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(modal);
+          document.getElementById('closeAlarmOffPopup').onclick = () => modal.remove();
+          // 벨 아이콘 갱신
+          if (typeof updateBellIcon === 'function') updateBellIcon();
+        };
+      }
+      // 기존 설정 불러오기
+      const savedInterval = localStorage.getItem('todoAlarmInterval');
+      const savedDay = localStorage.getItem('todoAlarmDay');
+      if (savedInterval) document.getElementById('alarm-interval').value = savedInterval;
+      if (savedDay) document.getElementById('alarm-day-input').value = 'd-' + savedDay;
+    }
 
     // ===== 무료 사용기간 만료 체크 (2026-01-03 이후 차단) =====
     (function() {
@@ -726,6 +857,15 @@ async function renderKeywordPage() {
       else if (type === 'keyword') renderKeywordPage();
       else if (type === 'trash') renderTrashPage();
       else if (type === 'settings') renderSettingsPage();
+      else if (type === 'notification') {
+        renderNotificationPage();
+        // 벨 아이콘 갱신(알림 페이지 진입 시 항상 반영)
+        const bellLine = document.getElementById('notification-bell-off-line');
+        if (bellLine) {
+          const hasAlarm = localStorage.getItem('todoAlarmInterval') && localStorage.getItem('todoAlarmDay');
+          bellLine.style.display = hasAlarm ? 'none' : 'block';
+        }
+      }
     });
 
     document.getElementById('closeBtn').onclick = () => window.electronAPI.close();

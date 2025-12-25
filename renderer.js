@@ -181,6 +181,66 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshDisplay();
     setInterval(refreshDisplay, 60000);
 
+    // ===== 할일 마감 알림 주기적 팝업 =====
+    function showTodoAlarmPopup(msg) {
+        // 이미 떠있는 팝업이 있으면 중복 방지
+        if (document.getElementById('todo-alarm-popup')) return;
+        const popup = document.createElement('div');
+        popup.id = 'todo-alarm-popup';
+        popup.style.position = 'fixed';
+        popup.style.right = '32px';
+        popup.style.bottom = '32px';
+        popup.style.background = '#fff';
+        popup.style.border = '2px solid #00b49a';
+        popup.style.borderRadius = '12px';
+        popup.style.boxShadow = '0 4px 16px #00b49a33';
+        popup.style.padding = '22px 32px 18px 32px';
+        popup.style.zIndex = 9999;
+        popup.style.fontSize = '1.08em';
+        popup.style.color = '#0093b4';
+        popup.innerHTML = `<b style='color:#00b49a;'>할일 알림</b><br><div style='margin:10px 0 0 0;'>${msg}</div><button id='close-todo-alarm' style='margin-top:14px;background:#00b49a;color:#fff;border:none;padding:6px 18px;border-radius:7px;font-size:1em;cursor:pointer;'>닫기</button>`;
+        document.body.appendChild(popup);
+        document.getElementById('close-todo-alarm').onclick = () => popup.remove();
+        setTimeout(() => { if (popup.parentNode) popup.remove(); }, 12000); // 12초 후 자동 닫힘
+    }
+
+    async function checkTodoAlarms() {
+        // 설정값 불러오기
+        const interval = parseInt(localStorage.getItem('todoAlarmInterval') || '10', 10); // 분
+        const dDay = parseInt(localStorage.getItem('todoAlarmDay') || '1', 10); // ex: 1이면 D-1
+        if (!interval || !dDay) return;
+        const todos = await window.electronAPI.getTodos();
+        if (!Array.isArray(todos)) return;
+        const today = new Date(); today.setHours(0,0,0,0);
+        const alarmList = [];
+        for (const t of todos) {
+            if (!t.deadline || t.deadline === '없음') continue;
+            const dl = new Date(t.deadline); dl.setHours(0,0,0,0);
+            const diff = Math.floor((dl - today) / (1000*60*60*24));
+            if (diff === dDay) {
+                alarmList.push(`[${t.task}] 마감까지 D-${dDay} (${t.deadline})`);
+            }
+        }
+        if (alarmList.length > 0) {
+            showTodoAlarmPopup(alarmList.join('<br>'));
+        }
+    }
+
+    // 알림 타이머 관리 변수
+    window.todoAlarmTimerId = null;
+    function startTodoAlarmTimer() {
+        if (window.todoAlarmTimerId) clearInterval(window.todoAlarmTimerId);
+        const interval = parseInt(localStorage.getItem('todoAlarmInterval') || '10', 10);
+        if (!interval) return;
+        window.todoAlarmTimerId = setInterval(checkTodoAlarms, interval * 60000);
+    }
+
+    // 최초 10초 후, 이후 설정 간격(분)마다 반복
+    setTimeout(() => {
+        checkTodoAlarms();
+        startTodoAlarmTimer();
+    }, 10000);
+
     // B. 설정(톱니바퀴) 아이콘
     const cogBtn = document.querySelector('.cog-btn');
     if (cogBtn) cogBtn.onclick = () => window.electronAPI.openAppSettings();
