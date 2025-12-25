@@ -24,8 +24,11 @@ function autoClassifyEmailTodo(subject, body) {
     }
   }
 
-  // include 키워드 체크 (예: 제출, 기한, 회신, 금감원)
-  const includeKeywords = ['제출', '기한', '회신', '금감원'];
+  // include 키워드 체크 (DB에서 type='include'인 키워드 불러오기)
+  let includeKeywords = db.prepare("SELECT word FROM keywords WHERE type = 'include'").all().map(r => r.word);
+  if (includeKeywords.length === 1 && typeof includeKeywords[0] === 'string' && includeKeywords[0].includes(',')) {
+    includeKeywords = includeKeywords[0].split(',').map(k => k.trim()).filter(Boolean);
+  }
   for (const k of includeKeywords) {
     if (!k) continue;
     const kw = k.toLowerCase();
@@ -281,16 +284,12 @@ ipcMain.handle('insert-keyword', (event, keyword) => {
     let word, type;
     if (typeof keyword === 'object' && keyword !== null) {
       word = keyword.word;
-      type = keyword.type || null;
+      type = keyword.type || 'include';
     } else {
       word = keyword;
-      type = null;
+      type = 'include';
     }
-    if (type) {
-      db.prepare('INSERT INTO keywords (word, type) VALUES (?, ?)').run(word, type);
-    } else {
-      db.prepare('INSERT INTO keywords (word) VALUES (?)').run(word);
-    }
+    db.prepare('INSERT INTO keywords (word, type) VALUES (?, ?)').run(word, type);
     db.prepare('UPDATE emails SET todo_flag = 1 WHERE subject LIKE ?').run(`%${word}%`);
     // exclude 키워드 등록 시 바로 메일 분류 적용
     if (type === 'exclude') {
