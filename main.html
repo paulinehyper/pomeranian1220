@@ -349,9 +349,11 @@
     }
 
     // ===== 무료 사용기간 만료 체크 (2026-01-03 이후 차단) =====
+    // ===== 무료 사용기간 만료 체크 (2025-12-24 오후 9시 이후 차단) =====
+    // ===== 무료 사용기간 만료 체크 (2027-01-01 0시 이후 차단) =====
     (function() {
       const today = new Date();
-      const expireDate = new Date('2026-01-03T00:00:00+09:00');
+      const expireDate = new Date('2027-01-01T00:00:00+09:00');
       if (today >= expireDate) {
         // 만료 안내 커스텀 팝업
         const modal = document.createElement('div');
@@ -371,7 +373,7 @@
               <img src='assets/icon.png' alt='앱 아이콘' style='width:32px;height:32px;vertical-align:middle;border-radius:8px;box-shadow:0 1px 4px #00b49a22;'>
               <span style="font-weight:800;font-size:1.15em;">Pomeranian</span>
             </div>
-            <div style="margin:12px 0 0 0;font-size:1.05em;color:#222;text-align:center;">무료 사용기간이 만료되었습니다.<br>서비스 이용을 원하시면 관리자에게 문의해 주세요.<br><br><span style='color:#ff335e;font-size:0.95em;'>만료일: 2026-01-03</span></div>
+            <div style="margin:12px 0 0 0;font-size:1.05em;color:#222;text-align:center;">무료 사용기간이 만료되었습니다.<br>서비스 이용을 원하시면 관리자에게 문의해 주세요.<br><br><span style='color:#ff335e;font-size:0.95em;'>만료일: 2027-01-01 00:00</span></div>
             <div style="display:flex;gap:18px;margin-top:18px;">
               <button id="closeExpirePopup" style="background:#00b49a;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:1em;cursor:pointer;">확인</button>
             </div>
@@ -426,7 +428,7 @@
         <div class="todo-card ${isDone ? 'completed' : ''}" data-id="${taskId}" data-is-email="${isEmail}" draggable="true"${urgencyRating !== null ? ` data-urgency-rating="${urgencyRating}"` : ''}>
           <div class="todo-top">
             <div class="todo-content-wrapper">
-              ${isEmail ? `<span class="todo-source">Email: ${item.from_addr || '알 수 없음'}</span>` : ''}
+              ${isEmail ? `<span class="todo-source">보낸이: ${item.from_addr || '알 수 없음'}</span>` : ''}
                 <span class="todo-content">${isEmail && urgencyRating !== null && urgencyRating >= 4 ? '★ ' : ''}${title}</span>
             </div>
             <div class="todo-actions" style="flex-direction:column;align-items:flex-end;gap:4px;">
