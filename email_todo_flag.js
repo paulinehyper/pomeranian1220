@@ -55,6 +55,10 @@ function markTodoEmails() {
     // 제외된 이메일 제목 목록 가져오기
     const excludedSubjects = db.prepare('SELECT subject FROM emails WHERE todo_flag = 9').all().map(r => r.subject).filter(Boolean);
   
+
+  // sentence 타입 키워드 목록
+  const sentenceKeywords = db.prepare("SELECT word FROM keywords WHERE type = 'sentence'").all().map(r => r.word);
+
   for (const mail of emailsToMark) {
     const subjectText = (mail.subject || '').toLowerCase();
     const bodyText = (mail.body || '').toLowerCase();
@@ -79,6 +83,20 @@ function markTodoEmails() {
       }
     }
     if (excluded) continue;
+
+    // [추가] sentence 타입 키워드가 3개 이상 포함되면 제외
+    if (sentenceKeywords.length > 0) {
+      // 제목을 단어로 분리
+      const words = (mail.subject.match(/[\p{L}\p{N}]+/gu) || []).map(w => w.trim()).filter(w => w.length > 0);
+      let count = 0;
+      for (const word of words) {
+        if (sentenceKeywords.includes(word)) count++;
+      }
+      if (count >= 3) {
+        updateExclude.run(mail.id);
+        continue;
+      }
+    }
 
     // 1-2. 제목에 날짜(YYYY년 MM월 DD일 등)가 있어도 제외 키워드가 있으면 무조건 제외
     const datePattern = /(\d{4}년\s*\d{1,2}월\s*\d{1,2}일)|(\d{1,2}월\s*\d{1,2}일)/;

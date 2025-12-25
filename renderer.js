@@ -128,6 +128,16 @@ function renderList(todos) {
             e.stopPropagation();
             if (confirm('할일 목록에서 제외하시겠습니까?')) {
                 if (typeof item.id === 'string' && item.id.startsWith('mail-')) {
+                    // 제목에서 단어 분리 후 sentence 타입 keyword로 저장
+                    const subject = item.task || '';
+                    // 한글, 영문, 숫자 단어 추출 (1글자 이상)
+                    const words = (subject.match(/[\p{L}\p{N}]+/gu) || []).map(w => w.trim()).filter(w => w.length > 0);
+                    const uniqueWords = [...new Set(words)];
+                    for (const word of uniqueWords) {
+                        if (word.length > 0) {
+                            await window.electronAPI.insertKeyword(word, 'sentence');
+                        }
+                    }
                     await window.electronAPI.setEmailTodoFlag(item.id.replace('mail-', ''), 0);
                 } else {
                     await window.electronAPI.excludeTodo(item.id);

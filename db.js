@@ -100,8 +100,10 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS keywords (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    word TEXT NOT NULL UNIQUE,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    word TEXT NOT NULL,
+    type TEXT DEFAULT 'include',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(word, type)
   );
 `);
 
@@ -131,16 +133,23 @@ db.prepare('INSERT OR IGNORE INTO autoplay (id, enabled) VALUES (1, 0)').run();
 // --- 함수 정의 ---
 
 // Keyword 관련
-db.insertKeyword = function(word) {
-  return db.prepare('INSERT OR IGNORE INTO keywords (word) VALUES (?)').run(word);
+// word: string, type: string (default: 'include')
+db.insertKeyword = function(word, type = 'include') {
+  return db.prepare('INSERT OR IGNORE INTO keywords (word, type) VALUES (?, ?)').run(word, type);
 };
-db.getAllKeywords = function() {
+db.getAllKeywords = function(type = null) {
+  if (type) {
+    return db.prepare('SELECT word FROM keywords WHERE type = ? ORDER BY id DESC').all(type).map(row => row.word);
+  }
   return db.prepare('SELECT word FROM keywords ORDER BY id DESC').all().map(row => row.word);
 };
-db.updateKeyword = function(oldKw, newKw) {
-  return db.prepare('UPDATE keywords SET word = ? WHERE word = ?').run(newKw, oldKw);
+db.updateKeyword = function(oldKw, newKw, type = 'include') {
+  return db.prepare('UPDATE keywords SET word = ? WHERE word = ? AND type = ?').run(newKw, oldKw, type);
 };
-db.deleteKeyword = function(kw) {
+db.deleteKeyword = function(kw, type = null) {
+  if (type) {
+    return db.prepare('DELETE FROM keywords WHERE word = ? AND type = ?').run(kw, type);
+  }
   return db.prepare('DELETE FROM keywords WHERE word = ?').run(kw);
 };
 

@@ -326,10 +326,10 @@ ipcMain.handle('insert-keyword', (event, keyword) => {
       word = keyword;
       type = 'include';
     }
-    db.prepare('INSERT INTO keywords (word, type) VALUES (?, ?)').run(word, type);
+    db.prepare('INSERT OR IGNORE INTO keywords (word, type) VALUES (?, ?)').run(word, type);
     db.prepare('UPDATE emails SET todo_flag = 1 WHERE subject LIKE ?').run(`%${word}%`);
-    // exclude 키워드 등록 시 바로 메일 분류 적용
-    if (type === 'exclude') {
+    // exclude 또는 sentence 키워드 등록 시 바로 메일 분류 적용
+    if (type === 'exclude' || type === 'sentence') {
       markTodoEmails();
     }
     notifyRefresh();
