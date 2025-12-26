@@ -128,9 +128,12 @@
         const deadlineStr = dateSpan.getAttribute('data-deadline');
         if (!deadlineStr) return;
         const deadline = new Date(deadlineStr);
-        const diff = Math.floor((deadline - today) / (1000*60*60*24));
+        // 오늘 날짜만 시간 제거
+        const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const deadlineDateOnly = new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate());
+        const diff = Math.floor((deadlineDateOnly - todayDateOnly) / (1000*60*60*24));
+        // D-day 이내(0 포함)면 흔들림
         if (diff <= alarmDay && diff >= 0) {
-          // 색상 순환 적용
           shakeColors.forEach(color => card.classList.remove(color));
           const colorClass = shakeColors[shakeColorIndex % shakeColors.length];
           card.classList.add(colorClass);
@@ -139,7 +142,6 @@
             card.classList.remove('shake');
           }, 1000);
         } else {
-          // 알림 범위가 아니면 색상 원래대로
           shakeColors.forEach(color => card.classList.remove(color));
         }
       });
