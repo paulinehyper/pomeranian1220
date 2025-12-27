@@ -27,7 +27,7 @@
       max-height: 100vh;
       position: absolute;
       top: 0; left: 0;
-      background: #f8fffd;
+      background: #e6fffb;
       border-radius: 0;
       box-shadow: none;
       overflow: hidden;
@@ -35,14 +35,14 @@
       flex-direction: column;
       border: none;
     }
-    .widget-home-header { height: 64px; background: #fff; display: flex; align-items: center; justify-content: center; position: relative; padding: 0 24px; box-shadow: 0 2px 8px #00000011; font-size: 1.15em; font-weight: bold; color: #000000; -webkit-app-region: drag; flex-shrink: 0; }
-    .sidebar-toggle-btn { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); background: transparent; border: none; font-size: 1.7em; color: #000000; cursor: pointer; z-index: 10; }
+    .widget-home-header { height: 64px; background: #fff; display: flex; align-items: center; justify-content: center; position: relative; padding: 0 24px; box-shadow: 0 2px 8px #00b49a11; font-size: 1.15em; font-weight: bold; color: #00b49a; -webkit-app-region: drag; flex-shrink: 0; }
+    .sidebar-toggle-btn { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); background: transparent; border: none; font-size: 1.7em; color: #00b49a; cursor: pointer; z-index: 10; }
     .widget-home.hide-sidebar .widget-home-sidebar { display: none !important; }
     .widget-home.hide-sidebar .widget-content-area { padding-left: 0 !important; }
     .widget-home-header * { -webkit-app-region: no-drag; }
-    .widget-home-sidebar { width: 56px; height: 100%; background: #ffffff; border-right: 1px solid #f0f0f0; display: flex; flex-direction: column; align-items: center; gap: 16px; padding-top: 20px; flex-shrink: 0; }
-    .sidebar-btn { background: transparent; border: none; cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; color: #575757; transition: 0.2s; }
-    .sidebar-btn:hover { background: #f0f0f0; }
+    .widget-home-sidebar { width: 56px; height: 100%; background: #ffffff; border-right: 1px solid #e6fffb; display: flex; flex-direction: column; align-items: center; gap: 16px; padding-top: 20px; flex-shrink: 0; }
+    .sidebar-btn { background: transparent; border: none; cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; color: #00b49a; transition: 0.2s; }
+    .sidebar-btn:hover { background: #e6fffb; }
     .sidebar-btn svg { width: 22px; height: 22px; stroke: currentColor; }
     .widget-content-area {
       display: flex;
@@ -55,20 +55,20 @@
       padding: 20px;
       flex: 1;
       overflow-y: auto;
-      background: #ffffff;
+      background: #f1fbfa;
       width: 100%;
       height: 100%;
       box-sizing: border-box;
     }
     
     /* 할일 카드 스타일 */
-    .todo-card { position: relative; background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 10px rgba(136, 136, 136, 0.08); border-left: 5px solid #888888; transition: 0.2s; cursor: pointer; }
+    .todo-card { position: relative; background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 10px rgba(0, 180, 154, 0.08); border-left: 5px solid #02b69b; transition: 0.2s; cursor: pointer; }
     .todo-card.purple { background: #f5edff !important; border-left-color: #a259e4 !important; }
     .todo-card.orange { background: #fff4e6 !important; border-left-color: #ff9800 !important; }
     .todo-card.blue { background: #e6f2ff !important; border-left-color: #2196f3 !important; }
-    .todo-card:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(136, 136, 136, 0.12); }
-    .todo-card.completed { border-left-color: #bbb !important; background: #f2f2f2 !important; opacity: 0.7; }
-    .todo-card.completed .todo-content { text-decoration: line-through; color: #888; }
+    .todo-card:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 180, 154, 0.12); }
+    .todo-card.completed { border-left-color: #7be2c5 !important; background: #e6fffb !important; opacity: 0.7; }
+    .todo-card.completed .todo-content { text-decoration: line-through; color: #7be2c5; }
     .shake {
       animation: shake 0.5s;
     }
@@ -84,30 +84,38 @@
     .todo-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
     .todo-content-wrapper { flex: 1; }
     .todo-content { font-weight: 600; color: #333; font-size: 1em; line-height: 1.4; display: block; }
-    .todo-source { font-size: 0.75em; color: #888888; font-weight: bold; margin-bottom: 4px; display: block; }
+    .todo-source { font-size: 0.75em; color: #00b49a; font-weight: bold; margin-bottom: 4px; display: block; }
     
     .todo-actions { display: flex; align-items: center; gap: 6px; }
-    .action-btn { background: #fff; border: 1.2px solid #bbb; color: #888; border-radius: 6px; padding: 2px 7px; cursor: pointer; font-size: 0.8em; font-weight: bold; }
-    .action-btn:hover { background: #eee; color: #333; }
+    .action-btn { background: #fff; border: 1.2px solid #7be2c5; color: #00b49a; border-radius: 6px; padding: 2px 7px; cursor: pointer; font-size: 0.8em; font-weight: bold; }
+    .action-btn:hover { background: #e6fffb; color: #00b49a; }
     .delete-icon-btn { background: transparent; border: none; cursor: pointer; padding: 0; align-items: center; }
 
     .todo-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
-    .todo-date { font-size: 0.8em; color: #777; background: #f0fcf9; padding: 2px 8px; border-radius: 4px; }
+    .todo-date { font-size: 0.8em; color: #00b49a; background: #e6fffb; padding: 2px 8px; border-radius: 4px; }
     
     .d-day-badge { font-size: 0.75em; font-weight: bold; padding: 2px 8px; border-radius: 6px; color: #fff; }
-    .d-day-active { background: #636464; }
+    .d-day-active { background: #02dba1; }
     .d-day-urgent { background: #ff5e5e; }
     .d-day-passed { background: #ddd; color: #777; }
 
     /* 입력 섹션 */
-    .input-section { background: #fff; padding: 12px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #eef2f1; }
+    .input-section { background: #fff; padding: 12px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #7be2c5; }
     .input-row { display: flex; gap: 6px; }
-    .todo-input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 1.5px solid #cccccc; outline: none; }
-    .date-input { width: 120px; border-radius: 8px; border: 1.5px solid #cccccc; padding: 0 5px; }
-    .add-btn { background: #ffffff; color: #000000; border: 1em; padding: 0 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    .todo-input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 1.5px solid #7be2c5; outline: none; }
+    .date-input { width: 120px; border-radius: 8px; border: 1.5px solid #7be2c5; padding: 0 5px; }
+    .add-btn { background: #02dba1; color: #fff; border: none; padding: 0 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
     .add-btn:hover {
-      background: #f0f0f0;
-      color: #222;
+      background: #00b49a;
+      color: #fff;
+    }
+    .add-btn:active {
+      background: #151515;
+      color: #01826e;
+    }
+    .add-btn:hover {
+      background: #02c390;
+      color: #000000;
     }
     .add-btn:active {
       background: #cccccc;
