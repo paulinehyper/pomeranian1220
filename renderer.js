@@ -191,14 +191,14 @@ document.addEventListener('DOMContentLoaded', () => {
         popup.style.right = '32px';
         popup.style.bottom = '32px';
         popup.style.background = '#fff';
-        popup.style.border = '2px solid #00b49a';
+        popup.style.border = '2px solid #000000';
         popup.style.borderRadius = '12px';
-        popup.style.boxShadow = '0 4px 16px #00b49a33';
+        popup.style.boxShadow = '0 4px 16px #00000033';
         popup.style.padding = '22px 32px 18px 32px';
         popup.style.zIndex = 9999;
         popup.style.fontSize = '1.08em';
         popup.style.color = '#0093b4';
-        popup.innerHTML = `<b style='color:#00b49a;'>할일 알림</b><br><div style='margin:10px 0 0 0;'>${msg}</div><button id='close-todo-alarm' style='margin-top:14px;background:#00b49a;color:#fff;border:none;padding:6px 18px;border-radius:7px;font-size:1em;cursor:pointer;'>닫기</button>`;
+        popup.innerHTML = `<b style='color:#000000;'>할일 알림</b><br><div style='margin:10px 0 0 0;'>${msg}</div><button id='close-todo-alarm' style='margin-top:14px;background:#000000;color:#fff;border:none;padding:6px 18px;border-radius:7px;font-size:1em;cursor:pointer;'>닫기</button>`;
         document.body.appendChild(popup);
         document.getElementById('close-todo-alarm').onclick = () => popup.remove();
         setTimeout(() => { if (popup.parentNode) popup.remove(); }, 12000); // 12초 후 자동 닫힘

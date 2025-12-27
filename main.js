@@ -493,7 +493,7 @@ app.whenReady().then(() => {
   global.showTrayPopup = function(email) {
     // todo_flag: 1(미완료), 2(완료) => 이메일 할일로 분류된 메일
     const isEmailTodo = email.todo_flag === 1 || email.todo_flag === 2;
-    const bgColor = isEmailTodo ? 'linear-gradient(90deg,#fff700 0%,#ffe98a 100%)' : 'rgba(0,180,154,0.95)';
+    const bgColor = isEmailTodo ? 'linear-gradient(90deg,#fff700 0%,#ffe98a 100%)' : 'rgba(0, 255, 204, 0.95)';
     const title = isEmailTodo ? '이메일 할일' : '새 메일';
     const subject = isEmailTodo ? `[이메일 할일] ${email.subject}` : email.subject;
     const popup = new BrowserWindow({

@@ -19,7 +19,7 @@
       min-height: 540px;
       background: #f8fffd;
       border-radius: 18px;
-      box-shadow: 0 4px 32px #00b49a22, 0 1.5px 0 #00b49a11;
+      box-shadow: 0 4px 32px #00000022, 0 1.5px 0 #00000011;
       overflow: hidden;
       z-index: 10000;
       display: flex;
@@ -33,10 +33,10 @@
       align-items: center;
       justify-content: space-between;
       padding: 0 24px;
-      box-shadow: 0 2px 8px #00b49a11;
+      box-shadow: 0 2px 8px #00000011;
       font-size: 1.25em;
       font-weight: bold;
-      color: #00b49a;
+      color: #000000;
     }
     .widget-home-sidebar {
       position: absolute;
@@ -45,7 +45,7 @@
       width: 54px;
       height: calc(100% - 64px);
       background: #f8fffd;
-      box-shadow: 2px 0 8px #00b49a11;
+      box-shadow: 2px 0 8px #00000011;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -83,11 +83,11 @@
   <div class="widget-home">
     <div class="widget-home-header">
       <span style="display:inline-flex;align-items:center;gap:8px;">
-        <img src="assets/icon.png" alt="앱 아이콘" style="width:28px;height:28px;vertical-align:middle;margin-right:4px;border-radius:7px;box-shadow:0 1px 4px #00b49a22;" />
+        <img src="assets/icon.png" alt="앱 아이콘" style="width:28px;height:28px;vertical-align:middle;margin-right:4px;border-radius:7px;box-shadow:0 1px 4px #00000022;" />
         Home
       </span>
       <div>
-        <button id="closeBtn" title="닫기" style="background:transparent;border:none;font-size:1.5em;color:#00b49a;cursor:pointer;">×</button>
+        <button id="closeBtn" title="닫기" style="background:transparent;border:none;font-size:1.5em;color:#000000;cursor:pointer;">×</button>
       </div>
     </div>
     <div class="widget-home-sidebar">
@@ -134,7 +134,7 @@
         </div>
         <ul id="todo-mail-list" class="schedule-list" style="min-height:40px;padding-left:0;list-style:none;margin:0;"></ul>
       </div>
-      <h2 id="mainTitle" style="color:#00b49a;margin:0 0 18px 0;font-size:1.2em;">Home</h2>
+      <h2 id="mainTitle" style="color:#000000;margin:0 0 18px 0;font-size:1.2em;">Home</h2>
       <!-- 위젯 메인 컨텐츠 영역 -->
     </div>
   </div>
@@ -196,7 +196,7 @@
     function renderMainContent(idx) {
     let contentHtml = "";
     if (idx === 0) {
-      contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🏠 홈(Home) 화면</h2><ul class="schedule-list"></ul>`;
+      contentHtml = `<h2 id="mainTitle" style='color:#000000;margin:0 0 18px 0;font-size:1.2em;'>🏠 홈(Home) 화면</h2><ul class="schedule-list"></ul>`;
       widgetMain.innerHTML = contentHtml;
       // 최신 할일 목록 새로고침
       if (window.fetchTodos && window.renderList) {
@@ -204,12 +204,12 @@
       }
       return;
     } else if (idx === 1) {
-        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>🔑 키워드 관리</h2><p>여기서 키워드를 관리할 수 있습니다.</p>`;
+        contentHtml = `<h2 id="mainTitle" style='color:#000000;margin:0 0 18px 0;font-size:1.2em;'>🔑 키워드 관리</h2><p>여기서 키워드를 관리할 수 있습니다.</p>`;
     } else if (idx === 2) {
-        contentHtml = `<h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>📧 이메일 연동</h2><p>이메일 연동 설정 및 정보를 확인하세요.</p>`;
+        contentHtml = `<h2 id="mainTitle" style='color:#000000;margin:0 0 18px 0;font-size:1.2em;'>📧 이메일 연동</h2><p>이메일 연동 설정 및 정보를 확인하세요.</p>`;
     } else if (idx === 3) {
         contentHtml = `
-        <h2 id="mainTitle" style='color:#00b49a;margin:0 0 18px 0;font-size:1.2em;'>⚙️ 환경설정</h2>
+        <h2 id="mainTitle" style='color:#000000;margin:0 0 18px 0;font-size:1.2em;'>⚙️ 환경설정</h2>
         <form id='mailSettingsForm' style='display:flex;flex-direction:column;gap:18px;align-items:stretch;margin-top:18px;max-width:340px;margin-left:auto;margin-right:auto;'>
           <div style='display:flex;flex-direction:column;gap:8px;'>
             <label style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>방식/보안</label>
@@ -234,7 +234,7 @@
             <label for='mailPw' style='font-weight:bold;color:#0093b4;margin-bottom:2px;'>비밀번호</label>
             <input id='mailPw' type='password' placeholder='비밀번호' style='padding:8px 16px;border-radius:8px;border:1.5px solid #7be2c5;font-size:1em;outline:none;background:#f8fffd;' />
           </div>
-          <button type='submit' style='margin-top:10px;background:#00b49a;color:#fff;border:none;padding:10px 36px;border-radius:8px;font-weight:bold;font-size:1.1em;cursor:pointer;box-shadow:0 2px 8px #00b49a22;'>저장</button>
+          <button type='submit' style='margin-top:10px;background:#000000;color:#fff;border:none;padding:10px 36px;border-radius:8px;font-weight:bold;font-size:1.1em;cursor:pointer;box-shadow:0 2px 8px #00000022;'>저장</button>
         </form>`;
     }
     widgetMain.innerHTML = contentHtml;
