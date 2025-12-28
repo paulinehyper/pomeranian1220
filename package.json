@@ -18,10 +18,9 @@
     "files": [
       "**/*",
       "!todo.db",
-       "!*.js",          
-       "*.obf.js",        
-        "!node_modules/.cache"
-
+      "!*.js",
+      "*.obf.js",
+      "!node_modules/.cache"
     ],
     "win": {
       "target": "nsis",

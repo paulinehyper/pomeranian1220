@@ -102,6 +102,7 @@ function setupMailIpc(main) {
               subject = Array.isArray(headerPart.body.subject) ? headerPart.body.subject[0] : (headerPart.body.subject || '');
               from = Array.isArray(headerPart.body.from) ? headerPart.body.from[0] : (headerPart.body.from || '');
               date = Array.isArray(headerPart.body.date) ? headerPart.body.date[0] : (headerPart.body.date || '');
+              console.log(`[메일 제목 처리] subject: ${subject}`);
             }
             let body = '';
             if (textPart && textPart.body) {
@@ -137,7 +138,8 @@ function setupMailIpc(main) {
             }
             const hash = crypto.createHash('sha256').update((subject||'')+(body||'')+(from||'')+(date||'')).digest('hex');
             // TensorFlow 분류기 제거, rule-based 분류로 대체
-            const { autoClassifyEmailTodo } = require('./main');
+            const { autoClassifyEmailTodo } = require('./classify');
+            console.log('[DEBUG] autoClassifyEmailTodo 호출:', subject, body);
             let todoFlag = autoClassifyEmailTodo(subject, body);
             const finalDeadline = extractDeadline(subject) || extractDeadline(body);
             if (!exists.get(hash).cnt) {
@@ -146,7 +148,9 @@ function setupMailIpc(main) {
               db.prepare('INSERT INTO emails (received_at, subject, body, from_addr, todo_flag, unique_hash, deadline, created_at, email_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
                 .run(date, subject, body, from, todoFlag, hash, finalDeadline, createdAt, emailHash);
             }
-          } catch (e) { /* 무시 */ }
+          } catch (e) {
+            console.error('[메일 저장 에러]', e);
+          }
         }
         await conn.end();
         return { success: true, count: messages.length };
@@ -216,7 +220,7 @@ function setupMailIpc(main) {
               const hash = crypto.createHash('sha256').update((subject||'')+(body||'')+(from||'')+(date||'')).digest('hex');
               const exists = db.prepare('SELECT COUNT(*) as cnt FROM emails WHERE unique_hash = ?');
               // TensorFlow 분류기 제거, rule-based 분류로 대체
-              const { autoClassifyEmailTodo } = require('./main');
+              const { autoClassifyEmailTodo } = require('./classify');
               let todoFlag = autoClassifyEmailTodo(subject, body);
               const finalDeadline = extractDeadline(subject) || extractDeadline(body);
               if (!exists.get(hash).cnt) {

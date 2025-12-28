@@ -10,7 +10,12 @@ const appDataDir = process.env.APPDATA ||
     : path.join(process.env.HOME || '', '.config'));
 const dbDir = path.join(appDataDir, appName);
 if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+  try {
+    fs.mkdirSync(dbDir, { recursive: true });
+    console.log('[DB] 상위 폴더 자동 생성 완료:', dbDir);
+  } catch (err) {
+    console.error('[DB] 상위 폴더 생성 실패:', dbDir, err);
+  }
 }
 const dbPath = path.join(dbDir, 'todo.db');
 console.log('DB 경로:', dbPath);
