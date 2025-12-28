@@ -1,3 +1,20 @@
+// sub exclude keywords 유사도 측정 함수
+function isSubExclude(subject, body, excludeKeywords, threshold = 3) {
+  // excludeKeywords 배열을 sub keyword로 분해
+  const subKeywords = [];
+  for (const kw of excludeKeywords) {
+    subKeywords.push(...kw.split(/[^가-힣a-zA-Z0-9]+/).filter(Boolean));
+  }
+  // 중복 제거
+  const uniqueSubs = [...new Set(subKeywords.map(s => s.toLowerCase()))];
+  const text = ((subject || '') + ' ' + (body || '')).toLowerCase();
+  let count = 0;
+  for (const sub of uniqueSubs) {
+    if (sub && text.includes(sub)) count++;
+    if (count >= threshold) return true;
+  }
+  return false;
+}
 const db = require('./db');
 
 function autoClassifyEmailTodo(subject, body) {
@@ -14,6 +31,11 @@ function autoClassifyEmailTodo(subject, body) {
   const bodyText = (body || '').toLowerCase();
   console.log('[키워드 매칭] subject:', subjectText, '| body:', bodyText);
   console.log('[키워드 매칭] excludeKeywords:', excludeKeywords);
+  // sub exclude keywords 유사도(3개 이상) 체크
+  if (isSubExclude(subject, body, excludeKeywords)) {
+    console.log('[키워드 매칭] SUB-EXCLUDE 3개 이상 조합 매칭');
+    return 9; // 무조건 제외
+  }
   for (const k of excludeKeywords) {
     if (!k) continue;
     const kw = k.toLowerCase();
