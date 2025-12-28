@@ -836,8 +836,12 @@ async function renderKeywordPage() {
   const refresh = async () => {
     try {
       // 1. DB에서 키워드 데이터 호출
-      const ks = await window.electronAPI.getKeywords();
-      
+      let ks = await window.electronAPI.getKeywords();
+
+      // 날짜 패턴(YYYY년, MM월, DD일 등) 자동 제외
+      const datePattern = /^(\d{4}년|\d{1,2}월|\d{1,2}일)$/;
+      ks = ks.filter(k => !(k.type === 'exclude' && datePattern.test(k.word)));
+
       // 2. 뱃지 생성 헬퍼 함수 (긴 텍스트 대응)
       const createBadge = (k) => `
         <div class="keyword-tag" style="
@@ -1031,7 +1035,7 @@ async function renderKeywordPage() {
                 <input type="password" id="mailPwMain" required class="short-input" style="width:80%;min-width:160px;max-width:320px;padding:7px 10px;border-radius:7px;border:1.2px solid #cccccc;" />
               </div>
               <div class="form-row" style="text-align:center;">
-                <button type="submit" class="connect-btn" style="background:#1fffc3;color:#fff;border:none;padding:10px 32px;border-radius:8px;font-size:1em;font-weight:bold;cursor:pointer;">연동하기</button>
+                <button type="submit" class="connect-btn" style="background:#00b49a;color:#fff;border:none;padding:10px 32px;border-radius:8px;font-size:1em;font-weight:bold;cursor:pointer;">연동하기</button>
               </div>
             </form>
           </div>
