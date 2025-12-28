@@ -482,18 +482,44 @@
                             // 이메일 본문 데이터 추출
                             const cardData = card.__itemData || null;
                             let body = '';
-                            if (cardData && cardData.body) {
-                              // MIME 경계 문자열만 있는 경우 빈 공란 처리
-                              const trimmed = cardData.body.trim();
-                              // MIME 경계 문자열+Content-Type 헤더만 있는 경우도 빈 공란 처리
-                              if (/^--[\w-]{10,}(\r?\n)?Content-Type:.*(--[\w-]{10,}--)?$/is.test(trimmed.replace(/\r/g, '')) ||
-                                  (/^--[\w-]{10,}/.test(trimmed) && trimmed.replace(/[-\w]/g, '').replace(/\s/g, '') === '')) {
-                                body = '';
+                            let receivedAt = '';
+                            if (cardData) {
+                              if (cardData.body) {
+                                // MIME 경계 문자열만 있는 경우 빈 공란 처리
+                                let rawBody = cardData.body.trim();
+                                if (/^--[\w-]{10,}(\r?\n)?Content-Type:.*(--[\w-]{10,}--)?$/is.test(rawBody.replace(/\r/g, '')) ||
+                                    (/^--[\w-]{10,}/.test(rawBody) && rawBody.replace(/[-\w]/g, '').replace(/\s/g, '') === '')) {
+                                  body = '';
+                                } else {
+                                  // 바이너리/깨진 문자(�, non-printable 등) 제거
+                                  body = rawBody.replace(/[\uFFFD\u0000-\u001F\u007F-\u009F]+/g, '');
+                                  // 한글, 영문, 숫자, 기호, 공백, 줄바꿈 등만 남기고 나머지 삭제 (추가 필터)
+                                  body = body.replace(/[^\uAC00-\uD7A3\u3131-\u318F\u1100-\u11FF\uA960-\uA97F\uD7B0-\uD7FF\w\d\s\p{P}\p{S}\p{Zs}\p{Zl}\p{Zp}\n\r.,!?@#$%^&*()\[\]{}<>\-_=+;:'"`~|\\/]/gu, '');
+                                }
                               } else {
-                                body = cardData.body;
+                                body = '이메일 본문 데이터를 불러올 수 없습니다.';
+                              }
+                              if (cardData.received_at) {
+                                // 한국어 요일 및 날짜 포맷 변환
+                                try {
+                                  const dateObj = new Date(cardData.received_at);
+                                  if (!isNaN(dateObj.getTime())) {
+                                    const week = ['일','월','화','수','목','금','토'];
+                                    const y = dateObj.getFullYear();
+                                    const m = (dateObj.getMonth()+1).toString().padStart(2,'0');
+                                    const d = dateObj.getDate().toString().padStart(2,'0');
+                                    const h = dateObj.getHours().toString().padStart(2,'0');
+                                    const min = dateObj.getMinutes().toString().padStart(2,'0');
+                                    const day = week[dateObj.getDay()];
+                                    receivedAt = `${y}-${m}-${d} (${day}) ${h}:${min}`;
+                                  } else {
+                                    receivedAt = cardData.received_at;
+                                  }
+                                } catch {
+                                  receivedAt = cardData.received_at;
+                                }
                               }
                             } else {
-                              // fallback: 카드 내부에 숨겨진 데이터가 없으면 안내
                               body = '이메일 본문 데이터를 불러올 수 없습니다.';
                             }
                             // 모달 생성
@@ -514,6 +540,7 @@
                                   <img src='assets/icon.png' alt='앱 아이콘' style='width:32px;height:32px;vertical-align:middle;border-radius:8px;box-shadow:0 1px 4px #00000022;'>
                                   <span style="font-weight:800;font-size:1.15em;">이메일 본문</span>
                                 </div>
+                                ${receivedAt ? `<div style='color:#009688;font-size:0.98em;margin-bottom:2px;'>수신: ${receivedAt}</div>` : ''}
                                 <div style="margin:12px 0 0 0;font-size:1em;color:#222;text-align:left;max-width:60vw;max-height:45vh;overflow:auto;white-space:pre-wrap;word-break:break-all;">${body ? body.replace(/</g,'&lt;').replace(/>/g,'&gt;') : '(내용 없음)'}</div>
                                 <div style="display:flex;gap:18px;margin-top:18px;">
                                   <button id="closeBodyModalBtn" style="background:#1fffc3;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:1em;cursor:pointer;">닫기</button>
